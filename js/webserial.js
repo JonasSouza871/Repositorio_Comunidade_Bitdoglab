@@ -149,6 +149,20 @@ class WebSerial {
     }
 
     /**
+     * Envia Ctrl+A (entra no raw REPL mode)
+     */
+    async sendCtrlA() {
+        await this.write('\x01');
+    }
+
+    /**
+     * Envia Ctrl+B (sai do raw REPL mode)
+     */
+    async sendCtrlB() {
+        await this.write('\x02');
+    }
+
+    /**
      * Loop de leitura de dados
      */
     async _startReading() {

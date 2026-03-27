@@ -186,4 +186,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Expose serial instance globally for flash.js
     window.webSerial = serial;
+
+    // ==========================================
+    // Suporte à Navegação por Abas (Claude)
+    // ==========================================
+    
+    /**
+     * Reinitializes terminal when tab becomes visible
+     * Call this when switching to terminal tab
+     */
+    window.refreshTerminal = function() {
+        setTimeout(() => {
+            term.fitAddon?.fit();
+            term.refresh(0, term.rows - 1);
+        }, 100);
+    };
+
+    /**
+     * Check if device is connected
+     */
+    window.isDeviceConnected = function() {
+        return serial.connected;
+    };
+
+    /**
+     * Get terminal instance for external access
+     */
+    window.getTerminal = function() {
+        return term;
+    };
+
+    /**
+     * Write message to terminal from external sources
+     */
+    window.writeToTerminal = function(message, color = null) {
+        if (color) {
+            term.writeln(`\r\n\x1b[${color}m${message}\x1b[0m`);
+        } else {
+            term.writeln(`\r\n${message}`);
+        }
+    };
+
+    // ==========================================
+    // Evento quando a aba terminal fica visível
+    // ==========================================
+    window.addEventListener('terminal-visible', () => {
+        window.refreshTerminal();
+    });
 });
