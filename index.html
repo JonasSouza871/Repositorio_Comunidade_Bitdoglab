@@ -67,6 +67,12 @@
                 </div>
             </section>
 
+            <!-- DETALHES DO PROJETO [CLAUDE] -->
+            <section class="detail-section" id="projectDetailSection">
+                <div class="detail-container" id="projectDetailContent">
+                </div>
+            </section>
+
             <!-- TERMINAL - WebSerial [KIMI] -->
             <section class="terminal-section" id="terminalSection">
                 <div class="terminal-container">
@@ -103,6 +109,19 @@
         </main>
     </div>
 
+    <!-- Modal de Preview de Código [CLAUDE] -->
+    <div id="codePreviewModal" class="modal-overlay">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title" id="codePreviewTitle">main.py</h2>
+                <button class="modal-close" onclick="closeCodePreview()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <pre class="code-preview"><code id="codePreviewContent"></code></pre>
+        </div>
+    </div>
+
     <!-- Modal de Novo Projeto [CLAUDE] -->
     <div id="projectModal" class="modal-overlay">
         <div class="modal modal-large">
@@ -123,17 +142,18 @@
                 <label class="form-label" for="projectVideo">Link do Vídeo (YouTube ou Google Drive) *</label>
                 <input type="url" id="projectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
 
-                <label class="form-label">Main.py - Script principal *</label>
+                <label class="form-label">Main.py - Script principal * <span class="form-hint">(máx. 100KB)</span></label>
                 <input type="file" id="projectMainFile" class="form-file" accept=".py">
 
-                <label class="form-label">Bibliotecas (.py)</label>
+                <label class="form-label">Bibliotecas (.py) <span class="form-hint">(máx. 10 arquivos, 100KB cada)</span></label>
                 <input type="file" id="projectLibraries" class="form-file" accept=".py" multiple>
 
-                <label class="form-label">PDFs de documentação *</label>
-                <input type="file" id="projectPdfs" class="form-file" accept=".pdf" multiple>
+                <label class="form-label">Links dos PDFs - Google Drive * <span class="form-hint">(um link por linha, máx. 5)</span></label>
+                <p class="form-warning">Os links devem estar com acesso "Qualquer pessoa com o link" no Drive.</p>
+                <textarea id="projectPdfLinks" class="form-textarea" placeholder="https://drive.google.com/file/d/..." rows="3"></textarea>
 
-                <label class="form-label">Documentos extras</label>
-                <input type="file" id="projectExtras" class="form-file" multiple>
+                <label class="form-label">Links extras - Google Drive <span class="form-hint">(um link por linha, máx. 5)</span></label>
+                <textarea id="projectExtraLinks" class="form-textarea" placeholder="https://drive.google.com/file/d/..." rows="2"></textarea>
 
                 <div id="uploadProgress" class="upload-progress" style="display: none;">
                     <div class="progress-bar">
@@ -170,13 +190,13 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
 
     <!-- Plataforma [CLAUDE] -->
     <script src="js/projects.js"></script>
     <script src="js/home.js"></script>
+    <script src="js/project-detail.js"></script>
     <script src="js/navigation.js"></script>
 
     <!-- WebSerial [KIMI] -->

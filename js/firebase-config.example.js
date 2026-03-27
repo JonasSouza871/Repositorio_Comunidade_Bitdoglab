@@ -22,3 +22,4 @@ firebase.initializeApp(firebaseConfig);
 // Instâncias globais
 const auth = firebase.auth();
 const db = firebase.firestore();
+
