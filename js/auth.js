@@ -33,12 +33,15 @@ auth.onAuthStateChanged(async (user) => {
     const userAvatar = document.getElementById('userAvatar');
     const logoutBtn = document.getElementById('logoutBtn');
 
+    const addProjectBtn = document.getElementById('addProjectBtn');
+
     if (user) {
         // Usuário logado
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
         userName.textContent = user.displayName || 'Usuário';
         userAvatar.src = user.photoURL || '';
+        if (addProjectBtn) addProjectBtn.style.display = 'flex';
 
         // Verifica se é primeiro login
         const isFirstLogin = await checkFirstLogin(user.uid);
@@ -49,6 +52,7 @@ auth.onAuthStateChanged(async (user) => {
         // Usuário deslogado
         loginBtn.style.display = 'flex';
         userInfo.style.display = 'none';
+        if (addProjectBtn) addProjectBtn.style.display = 'none';
     }
 });
 

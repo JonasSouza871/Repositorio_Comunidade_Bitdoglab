@@ -43,50 +43,31 @@ class FlashManager {
     }
 
     /**
-     * Aguarda prompt do Raw REPL
-     */
-    async waitForRawPrompt(timeout = 3000) {
-        return new Promise((resolve, reject) => {
-            let buffer = '';
-            const timeoutId = setTimeout(() => {
-                reject(new Error('Timeout waiting for Raw REPL prompt'));
-            }, timeout);
-
-            const checkBuffer = (data) => {
-                buffer += data;
-                // Raw REPL prompt é '>'
-                if (buffer.includes('>')) {
-                    clearTimeout(timeoutId);
-                    resolve();
-                }
-            };
-
-            // Override data callback temporarily
-            const originalCallback = this.serial.onDataCallback;
-            this.serial.onDataCallback = (data) => {
-                checkBuffer(data);
-                if (originalCallback) originalCallback(data);
-            };
-
-            // Restore after timeout or success
-            setTimeout(() => {
-                this.serial.onDataCallback = originalCallback;
-            }, timeout);
-        });
-    }
-
-    /**
      * Executa comando Python no Raw REPL e retorna resposta
+     * Protocolo Raw REPL: 
+     * 1. Envia código
+     * 2. Envia \n (newline)
+     * 3. Envia Ctrl+D (0x04) para executar
+     * 4. Aguarda resposta terminando com Ctrl+D
      */
-    async execRaw(command, timeout = 5000) {
+    async execRaw(command, timeout = 10000) {
         return new Promise(async (resolve, reject) => {
             let response = '';
-            let timeoutId;
+            let timeoutId = null;
             let originalCallback = null;
+            let isResolved = false;
 
             const cleanup = () => {
-                clearTimeout(timeoutId);
-                if (originalCallback !== null) {
+                if (isResolved) return;
+                isResolved = true;
+                
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                    timeoutId = null;
+                }
+                
+                // Restaura callback original
+                if (originalCallback !== null && this.serial) {
                     this.serial.onDataCallback = originalCallback;
                 }
             };
@@ -95,39 +76,59 @@ class FlashManager {
                 response += data;
                 
                 // Verifica se recebeu Ctrl+D (fim de execução)
-                if (response.includes('\x04')) {
-                    cleanup();
-                    
-                    // Processa resposta
-                    const result = response
-                        .replace(/OK/g, '')
-                        .replace(/\x04/g, '')
-                        .replace(/>/g, '')
-                        .trim();
-                    
-                    if (result.startsWith('Traceback') || 
-                        result.includes('Error:') || 
-                        result.includes('Exception')) {
-                        reject(new Error(result.substring(0, 200)));
-                    } else {
-                        resolve(result);
+                // O Raw REPL retorna: output + Ctrl+D + error_output + Ctrl+D + '>'
+                const ctrlDIndex = response.indexOf('\x04');
+                if (ctrlDIndex !== -1) {
+                    // Aguarda o segundo Ctrl+D (fim do error output) ou '>'
+                    const secondPart = response.slice(ctrlDIndex + 1);
+                    if (secondPart.includes('\x04') || secondPart.includes('>')) {
+                        cleanup();
+                        
+                        // Processa resposta: tudo antes do primeiro Ctrl+D é o output
+                        let result = response.substring(0, ctrlDIndex);
+                        
+                        // Remove 'OK' inicial se presente
+                        result = result.replace(/^OK\n?/, '');
+                        
+                        // Verifica se há erro (entre os dois Ctrl+D)
+                        const errorMatch = response.match(/\x04([\s\S]*?)\x04/);
+                        if (errorMatch && errorMatch[1] && 
+                            (errorMatch[1].includes('Traceback') || 
+                             errorMatch[1].includes('Error') ||
+                             errorMatch[1].includes('Exception'))) {
+                            reject(new Error(errorMatch[1].substring(0, 200)));
+                            return;
+                        }
+                        
+                        // Verifica se o resultado contém erro
+                        if (result.includes('Traceback') || 
+                            result.includes('SyntaxError') ||
+                            result.includes('NameError') ||
+                            result.includes('TypeError') ||
+                            result.includes('ImportError')) {
+                            reject(new Error(result.substring(0, 200)));
+                        } else {
+                            resolve(result.trim());
+                        }
                     }
                 }
             };
 
-            // Guarda callback original e substitui
+            // Guarda callback original
             originalCallback = this.serial.onDataCallback;
             this.serial.onDataCallback = onData;
 
+            // Timeout
             timeoutId = setTimeout(() => {
                 cleanup();
                 reject(new Error('Timeout execução Raw REPL'));
             }, timeout);
 
             try {
-                // Envia comando no formato Raw REPL
+                // Envia comando
                 await this.serial.write(command);
-                await this.serial.write('\x04'); // Ctrl+D = executa
+                // Envia newline + Ctrl+D para executar (protocolo Raw REPL)
+                await this.serial.write('\n\x04');
             } catch (error) {
                 cleanup();
                 reject(error);
@@ -140,19 +141,47 @@ class FlashManager {
      * Usa base64 para evitar problemas com caracteres especiais
      */
     async writeFile(filename, content) {
-        // Converte para base64 para evitar escaping problemático
-        const base64Content = btoa(unescape(encodeURIComponent(content)));
+        // Converte para base64 de forma segura com Unicode
+        // Usa encodeURIComponent + unescape para converter UTF-8 → binário
+        const base64Content = btoa(
+            encodeURIComponent(content).replace(/%([0-9A-F]{2})/g, 
+                (match, p1) => String.fromCharCode('0x' + p1)
+            )
+        );
+        
+        // Divide em chunks se for muito grande (limite do buffer serial)
+        const chunkSize = 512;
+        const chunks = [];
+        for (let i = 0; i < base64Content.length; i += chunkSize) {
+            chunks.push(base64Content.substring(i, i + chunkSize));
+        }
         
         // Comando Python para criar arquivo a partir de base64
-        const cmd = `
+        let cmd = `
 import ubinascii
 import os
-data = ubinascii.a2b_base64('${base64Content}')
-f = open('${filename}', 'wb')
-f.write(data)
-f.close()
-print('OK')
+
+# Remove arquivo existente se houver
+try:
+    os.remove('${filename}')
+except:
+    pass
+
+# Cria novo arquivo
+data = ubinascii.a2b_base64('${chunks[0]}')
+with open('${filename}', 'wb') as f:
+    f.write(data)
 `;
+
+        // Se tiver mais chunks, adiciona append
+        for (let i = 1; i < chunks.length; i++) {
+            cmd += `
+with open('${filename}', 'ab') as f:
+    f.write(ubinascii.a2b_base64('${chunks[i]}'))
+`;
+        }
+
+        cmd += `\nprint('OK')`;
 
         await this.execRaw(cmd);
     }
@@ -232,7 +261,7 @@ except:
         }
 
         this.isFlashing = true;
-        const originalCallback = this.serial.onDataCallback;
+        this.originalDataCallback = this.serial.onDataCallback;
         
         this.updateStatus('Starting flash process...');
 
@@ -243,12 +272,12 @@ except:
             // 1. Para qualquer execução atual
             this.updateStatus('Stopping current execution...');
             await this.serial.sendCtrlC();
-            await this.sleep(200);
+            await this.sleep(300);
 
             // 2. Entra no Raw REPL
             this.updateStatus('Entering Raw REPL mode...');
             await this.enterRawREPL();
-            await this.sleep(300);
+            await this.sleep(500);
 
             // 3. Download e flash do Main.py
             this.updateStatus('Downloading main.py...');
@@ -283,18 +312,20 @@ except:
             // 5. Sai do Raw REPL
             this.updateStatus('Exiting Raw REPL...');
             await this.exitRawREPL();
-            await this.sleep(100);
+            await this.sleep(200);
 
             // 6. Soft reset para executar main.py
             this.updateStatus('Restarting device...');
             await this.serial.sendCtrlD();
+            await this.sleep(500);
 
             this.updateStatus('Flash completed successfully!');
             this.updateProgress(100);
             this.isFlashing = false;
             
             // Restaura callback original
-            this.serial.onDataCallback = originalCallback;
+            this.serial.onDataCallback = this.originalDataCallback;
+            this.originalDataCallback = null;
             
             return true;
 
@@ -305,13 +336,17 @@ except:
             // Tenta restaurar estado normal
             try {
                 await this.exitRawREPL();
+                await this.sleep(100);
                 await this.serial.sendCtrlC();
             } catch (e) {
                 // Ignora erro ao recuperar
             }
             
             // Restaura callback original
-            this.serial.onDataCallback = originalCallback;
+            if (this.originalDataCallback !== null) {
+                this.serial.onDataCallback = this.originalDataCallback;
+                this.originalDataCallback = null;
+            }
             
             throw error;
         }
@@ -325,7 +360,7 @@ except:
             throw new Error('Device not connected');
         }
 
-        const originalCallback = this.serial.onDataCallback;
+        const savedCallback = this.serial.onDataCallback;
         
         try {
             await this.enterRawREPL();
@@ -336,7 +371,7 @@ except:
             await this.exitRawREPL();
             throw error;
         } finally {
-            this.serial.onDataCallback = originalCallback;
+            this.serial.onDataCallback = savedCallback;
         }
     }
 

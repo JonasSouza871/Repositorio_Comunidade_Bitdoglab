@@ -57,7 +57,7 @@
                 <div class="home-container">
                     <div class="home-header">
                         <h2 class="home-title">Projetos da Comunidade</h2>
-                        <button id="addProjectBtn" class="btn btn-add" style="display: none;">
+                        <button id="addProjectBtn" class="btn btn-add" style="display: none;" onclick="openProjectModal()">
                             <span class="material-icons">add</span> Novo Projeto
                         </button>
                     </div>
@@ -103,6 +103,52 @@
         </main>
     </div>
 
+    <!-- Modal de Novo Projeto [CLAUDE] -->
+    <div id="projectModal" class="modal-overlay">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title">Novo Projeto</h2>
+                <button class="modal-close" onclick="closeProjectModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <p class="modal-subtitle">Preencha todos os campos para publicar seu projeto.</p>
+            <div class="modal-form">
+                <label class="form-label" for="projectTitle">Nome do Projeto *</label>
+                <input type="text" id="projectTitle" class="form-input" placeholder="Ex: Semáforo com LEDs RGB" maxlength="100">
+
+                <label class="form-label" for="projectDescription">Descrição *</label>
+                <textarea id="projectDescription" class="form-textarea" placeholder="Explique o que seu projeto faz, como funciona..." rows="4"></textarea>
+
+                <label class="form-label" for="projectVideo">Link do Vídeo (YouTube ou Google Drive) *</label>
+                <input type="url" id="projectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
+
+                <label class="form-label">Main.py - Script principal *</label>
+                <input type="file" id="projectMainFile" class="form-file" accept=".py">
+
+                <label class="form-label">Bibliotecas (.py)</label>
+                <input type="file" id="projectLibraries" class="form-file" accept=".py" multiple>
+
+                <label class="form-label">PDFs de documentação *</label>
+                <input type="file" id="projectPdfs" class="form-file" accept=".pdf" multiple>
+
+                <label class="form-label">Documentos extras</label>
+                <input type="file" id="projectExtras" class="form-file" multiple>
+
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <span id="progressText" class="progress-text">Enviando...</span>
+                </div>
+
+                <button id="publishBtn" class="btn btn-save" onclick="publishProject()">
+                    <span class="material-icons">publish</span> Publicar Projeto
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Cadastro de Perfil [CLAUDE] -->
     <div id="profileModal" class="modal-overlay">
         <div class="modal">
@@ -128,7 +174,9 @@
     <script src="js/firebase-config.js"></script>
     <script src="js/auth.js"></script>
 
-    <!-- Navegação entre seções [CLAUDE] -->
+    <!-- Plataforma [CLAUDE] -->
+    <script src="js/projects.js"></script>
+    <script src="js/home.js"></script>
     <script src="js/navigation.js"></script>
 
     <!-- WebSerial [KIMI] -->
