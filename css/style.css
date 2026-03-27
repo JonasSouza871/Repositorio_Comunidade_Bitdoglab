@@ -1447,3 +1447,44 @@ html, body {
     z-index: 1;
 }
 
+
+
+/* ============================================
+   HEADER - Logo BitDogLab
+   ============================================ */
+.header-logo-img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    margin-left: 8px;
+    filter: drop-shadow(0 0 8px rgba(184, 41, 221, 0.6));
+    transition: transform 0.3s ease;
+}
+
+.header-logo-img:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* ============================================
+   BACKGROUND - Cachorro BitDogLab
+   ============================================ */
+.app::before {
+    content: '';
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: url('../images/programming-nobg.png') no-repeat center center;
+    background-size: contain;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.main {
+    position: relative;
+    z-index: 1;
+}
+

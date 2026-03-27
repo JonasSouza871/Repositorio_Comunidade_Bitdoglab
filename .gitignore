@@ -1,3 +1,7 @@
 contexto_problema.md
 skills/
 js/firebase-config.js
+
+# Firebase
+.firebase/
+firebase-debug.log
