@@ -54,6 +54,11 @@ auth.onAuthStateChanged(async (user) => {
         userInfo.style.display = 'none';
         if (addProjectBtn) addProjectBtn.style.display = 'none';
     }
+
+    // Recarrega contribuidores pra atualizar botão de editar bio
+    if (typeof loadContributors === 'function') {
+        loadContributors();
+    }
 });
 
 // Verifica se usuário já tem perfil no Firestore

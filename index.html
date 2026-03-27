@@ -22,6 +22,9 @@
                 <button class="nav-btn active" data-section="homeSection">
                     <span class="material-icons">home</span> Home
                 </button>
+                <button class="nav-btn" data-section="contributorsSection">
+                    <span class="material-icons">group</span> Contribuidores
+                </button>
                 <button class="nav-btn" data-section="terminalSection">
                     <span class="material-icons">terminal</span> Terminal
                 </button>
@@ -85,6 +88,18 @@
             <!-- DETALHES DO PROJETO -->
             <section class="detail-section" id="projectDetailSection">
                 <div class="detail-container" id="projectDetailContent">
+                </div>
+            </section>
+
+            <!-- CONTRIBUIDORES -->
+            <section class="contributors-section" id="contributorsSection">
+                <div class="contributors-container">
+                    <div class="contributors-header">
+                        <h2 class="home-title">Contribuidores da Comunidade</h2>
+                    </div>
+                    <div id="contributorsGrid" class="contributors-grid">
+                        <p class="empty-message">Carregando contribuidores...</p>
+                    </div>
                 </div>
             </section>
 
@@ -158,7 +173,12 @@
                 <label class="form-label">Links extras <span class="form-hint">(um por linha)</span></label>
                 <textarea id="editExtraLinks" class="form-textarea" rows="2"></textarea>
 
-                <label class="form-label">Códigos BNCC * <span class="form-hint">(digite o código ou busque por tema)</span></label>
+                <label class="form-label">
+                    Códigos BNCC *
+                    <a href="https://www.gov.br/mec/pt-br/escolas-conectadas/BNCCComputaoCompletodiagramado.pdf" target="_blank" rel="noopener" class="bncc-doc-inline">
+                        <span class="material-icons">menu_book</span> Ver normas
+                    </a>
+                </label>
                 <div class="bncc-tag-input-wrapper" id="editBnccWrapper">
                     <div class="bncc-tags-container" id="editBnccContainer">
                         <input type="text" class="bncc-tag-field" id="editBnccInput" placeholder="Ex: EF06CO02, algoritmo..." autocomplete="off">
@@ -278,6 +298,7 @@
     <script src="js/projects.js"></script>
     <script src="js/home.js"></script>
     <script src="js/project-detail.js"></script>
+    <script src="js/contributors.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/search.js"></script>
 

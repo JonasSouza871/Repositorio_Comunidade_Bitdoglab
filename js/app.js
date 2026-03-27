@@ -44,11 +44,11 @@ document.addEventListener('DOMContentLoaded', () => {
             brightCyan: '#6EDDD5',
             brightWhite: '#FFFFFF'
         },
-        fontSize: 13,
-        fontFamily: 'Nunito, monospace',
+        fontSize: 14,
+        fontFamily: "'Courier New', 'Consolas', 'Liberation Mono', monospace",
         scrollback: 10000,
-        lineHeight: 1.3,
-        letterSpacing: 0.5
+        lineHeight: 1.2,
+        letterSpacing: 0
     });
 
     term.open(document.getElementById('terminal'));

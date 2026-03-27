@@ -600,13 +600,18 @@ async function deleteCurrentProject() {
     
     try {
         await db.collection('projects').doc(currentProjectId).delete();
-        
+
+        // Decrementa contador de projetos do autor
+        await db.collection('users').doc(user.uid).update({
+            projectCount: firebase.firestore.FieldValue.increment(-1)
+        });
+
         // Volta para a home
         backToHome();
-        
+
         // Recarrega a lista de projetos
         loadProjects();
-        
+
         alert('Projeto excluído com sucesso!');
     } catch (error) {
         console.error('Erro ao excluir projeto:', error);
