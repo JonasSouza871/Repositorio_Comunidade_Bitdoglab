@@ -83,7 +83,6 @@ function createProjectCard(id, project) {
 
 // Abre detalhes do projeto
 function openProjectDetail(projectId) {
-    // TODO: Fase 5 - página de detalhes
     console.log('Abrir projeto:', projectId);
 }
 

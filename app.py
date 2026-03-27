@@ -1,5 +1,5 @@
 """
-BitDogLab WebSerial - Servidor HTTP simples
+BitDogLab WebSerial - Servidor HTTP
 """
 import http.server
 import socketserver

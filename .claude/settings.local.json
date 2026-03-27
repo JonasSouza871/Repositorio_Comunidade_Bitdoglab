@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(where python3:*)",
+      "Bash(where python:*)",
+      "Bash(where py:*)",
+      "Read(//c/Users/Jonas/Python312/**)",
+      "Read(//c/Users/Jonas/Desktop/poerifolio/**)",
+      "Bash(/c/Users/Jonas/Python312/python.exe -c \":*)",
+      "Bash(/c/Users/Jonas/Python312/python.exe -m pip install python-pptx python-docx)"
+    ]
+  }
+}

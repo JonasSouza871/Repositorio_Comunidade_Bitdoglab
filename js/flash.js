@@ -396,7 +396,7 @@ except:
 // Instância global (será inicializada com o WebSerial)
 window.FlashManager = FlashManager;
 
-// Função global que o Claude vai chamar
+// Função global para enviar código para o dispositivo
 window.flashToDevice = async function(mainFileURL, libraryURLs = []) {
     if (!window.flashManager) {
         throw new Error('FlashManager not initialized. Please initialize with WebSerial instance first.');

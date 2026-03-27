@@ -1,6 +1,5 @@
 /**
  * App - BitDogLab WebSerial
- * Terminal simples para comunicação serial
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Elementos da UI
@@ -17,36 +16,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusDot = document.getElementById('statusDot');
     const statusText = document.getElementById('statusText');
 
-    // Instância do WebSerial
+    // WebSerial
     const serial = new WebSerial();
 
-    // Terminal xterm.js
+    // xterm.js
     const term = new Terminal({
         cursorBlink: true,
         theme: {
-            background: '#161221',
-            foreground: '#89b4fa',
-            cursor: '#b829dd',
-            selection: 'rgba(137, 180, 250, 0.3)',
-            black: '#161221',
-            red: '#ff3860',
-            green: '#39ff14',
-            yellow: '#ffd700',
-            blue: '#89b4fa',
-            magenta: '#b829dd',
-            cyan: '#74c7ec',
-            white: '#cdd6f4',
-            brightBlack: '#2d2440',
-            brightRed: '#ff6b8a',
-            brightGreen: '#5aff3a',
-            brightYellow: '#ffe44d',
-            brightBlue: '#a6c9ff',
-            brightMagenta: '#d14dff',
-            brightCyan: '#89dceb',
-            brightWhite: '#ffffff'
+            background: '#1a1a2e',
+            foreground: '#EAEAEA',
+            cursor: '#E91E8C',
+            selection: 'rgba(233, 30, 140, 0.3)',
+            black: '#1a1a2e',
+            red: '#E91E8C',
+            green: '#00C9A7',
+            yellow: '#FFE66D',
+            blue: '#4A90E2',
+            magenta: '#E91E8C',
+            cyan: '#4ECDC4',
+            white: '#F8F9FA',
+            brightBlack: '#495057',
+            brightRed: '#F04CA3',
+            brightGreen: '#00D9B5',
+            brightYellow: '#FFF099',
+            brightBlue: '#6BA5E7',
+            brightMagenta: '#F04CA3',
+            brightCyan: '#6EDDD5',
+            brightWhite: '#FFFFFF'
         },
         fontSize: 13,
-        fontFamily: 'SF Mono, Monaco, Consolas, monospace',
+        fontFamily: 'Nunito, monospace',
         scrollback: 10000,
         lineHeight: 1.3,
         letterSpacing: 0.5
@@ -59,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     term.writeln('----------------------------');
     term.writeln('Clique em "Conectar" para começar.\r\n');
 
-    // Callbacks do WebSerial
+    // Callbacks
     serial.onData((data) => {
         term.write(data);
     });
@@ -97,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Eventos do terminal
+    // Eventos
     connectBtn.addEventListener('click', async () => {
         if (!WebSerial.isSupported()) {
             term.writeln('\r\n\x1b[31mErro: Web Serial API não é suportada neste navegador. Use Chrome, Edge ou Opera.\x1b[0m');
@@ -162,39 +161,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Flash Manager - Integração para envio de código
     // ==========================================
     
-    // Inicializa FlashManager com a instância do WebSerial
+    // FlashManager
     const flashManager = new FlashManager(serial);
     window.flashManager = flashManager;
 
     // Configura callbacks de progresso e status
     flashManager.onProgress((percent) => {
-        // O Claude pode implementar uma barra de progresso na UI
         if (window.onFlashProgress) {
             window.onFlashProgress(percent);
         }
     });
 
     flashManager.onStatus((message) => {
-        // Mostra status no terminal também
+        // Status no terminal
         term.writeln(`\r\n\x1b[36m[Flash] ${message}\x1b[0m`);
         
-        // O Claude pode implementar notificação na UI
         if (window.onFlashStatus) {
             window.onFlashStatus(message);
         }
     });
 
-    // Expose serial instance globally for flash.js
+    // Global para flash.js
     window.webSerial = serial;
 
     // ==========================================
-    // Suporte à Navegação por Abas (Claude)
+    // Suporte à Navegação por Abas
     // ==========================================
     
-    /**
-     * Reinitializes terminal when tab becomes visible
-     * Call this when switching to terminal tab
-     */
     window.refreshTerminal = function() {
         setTimeout(() => {
             term.fitAddon?.fit();
@@ -202,23 +195,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     };
 
-    /**
-     * Check if device is connected
-     */
     window.isDeviceConnected = function() {
         return serial.connected;
     };
 
-    /**
-     * Get terminal instance for external access
-     */
     window.getTerminal = function() {
         return term;
     };
 
-    /**
-     * Write message to terminal from external sources
-     */
     window.writeToTerminal = function(message, color = null) {
         if (color) {
             term.writeln(`\r\n\x1b[${color}m${message}\x1b[0m`);
@@ -228,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================
-    // Evento quando a aba terminal fica visível
+    // Aba terminal visível
     // ==========================================
     window.addEventListener('terminal-visible', () => {
         window.refreshTerminal();

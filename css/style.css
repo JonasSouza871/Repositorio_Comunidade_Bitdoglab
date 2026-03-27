@@ -1,6 +1,9 @@
+/* Tipografia Nunito - Fonte arredondada e amigável */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
 /* ============================================
-   BitDogLab WebSerial - CSS
-   Tema Roxo Neon
+   Comunidade BitDogLab - CSS
+   Identidade Visual BitDogLab Oficial
    ============================================ */
 
 /* Reset */
@@ -10,59 +13,86 @@
     box-sizing: border-box;
 }
 
-/* Variaveis CSS - Paleta Roxa Neon */
+/* Variaveis CSS - Paleta BitDogLab */
 :root {
-    /* Cores Principais - Roxo BitDogLab */
-    --color-primary: #4b2e83;
-    --color-primary-light: #6b4c9a;
-    --color-primary-dark: #3a1f6e;
-    --color-accent: #9d4edd;
-    --color-accent-glow: rgba(157, 78, 221, 0.5);
+    /* Cores Principais - BitDogLab */
+    --color-bit: #4A90E2;
+    --color-dog: #E91E8C;
+    --color-lab: #2D3436;
     
-    /* Neon Colors */
-    --neon-purple: #b829dd;
-    --neon-blue: #00d4ff;
-    --neon-green: #39ff14;
-    --neon-pink: #ff10f0;
+    /* Cores de Apoio */
+    --color-primary: #4A90E2;
+    --color-primary-light: #6BA5E7;
+    --color-primary-dark: #357ABD;
+    --color-accent: #E91E8C;
+    --color-accent-light: #F04CA3;
+    --color-accent-dark: #C4167A;
+    
+    /* Cores do gradiente */
+    --gradient-rosa: #FF6B9D;
+    --gradient-ciano: #4ECDC4;
+    --gradient-amarelo: #FFE66D;
+    --gradient-laranja: #FF8C42;
     
     /* Backgrounds */
-    --color-bg: #161221;
-    --color-bg-secondary: #221a30;
-    --color-bg-tertiary: #2d2440;
+    --color-bg: linear-gradient(135deg, #FFE66D 0%, #FF6B9D 40%, #4ECDC4 100%);
+    --color-bg-solid: #FFF9F0;
+    --color-bg-secondary: #FFFFFF;
+    --color-bg-tertiary: #FFF0F5;
     
     /* Borders */
-    --color-border: #3d2b5a;
+    --color-border: rgba(255, 255, 255, 0.5);
     
     /* Text */
-    --color-text: #f0f0f0;
-    --color-text-secondary: #b0a8c0;
-    --color-text-muted: #7a7a8a;
+    --color-text: #2D3436;
+    --color-text-secondary: #636E72;
+    --color-text-muted: #B2BEC3;
     
     /* Status */
-    --color-success: #39ff14;
-    --color-success-glow: rgba(57, 255, 20, 0.4);
-    --color-danger: #ff3860;
-    --color-danger-glow: rgba(255, 56, 96, 0.4);
+    --color-success: #00B894;
+    --color-success-glow: rgba(0, 184, 148, 0.3);
+    --color-danger: #E91E8C;
+    --color-danger-glow: rgba(233, 30, 140, 0.3);
     
     /* Dimensions */
-    --header-height: 65px;
-    --radius-sm: 8px;
+    --header-height: 70px;
+    --radius-sm: 15px;
+    --radius-lg: 50px;
     
     /* Glow Effects */
-    --glow-sm: 0 0 10px var(--color-accent-glow);
-    --glow-success: 0 0 15px var(--color-success-glow);
-    --glow-danger: 0 0 15px var(--color-danger-glow);
+    --glow-sm: 0 4px 15px rgba(233, 30, 140, 0.3);
+    --glow-success: 0 4px 15px rgba(0, 184, 148, 0.3);
+    --glow-danger: 0 4px 15px rgba(233, 30, 140, 0.3);
 }
 
 /* Base */
 html, body {
     height: 100%;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    background: var(--color-bg);
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    background: var(--color-bg-solid);
     color: var(--color-text);
     overflow: hidden;
+}
+
+/* Background gradiente animado */
+.app::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-bg);
+    opacity: 0.6;
+    z-index: -1;
+    animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(10deg); }
 }
 
 /* App Container */
@@ -70,39 +100,23 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-    background: linear-gradient(180deg, var(--color-bg) 0%, #1a1428 100%);
+    background: transparent;
 }
 
 /* ============================================
-   HEADER - Roxo com Neon
+   HEADER - BitDogLab
    ============================================ */
 .header {
     height: var(--header-height);
-    background: linear-gradient(90deg, var(--color-primary-dark) 0%, var(--color-primary) 50%, var(--color-primary-dark) 100%);
-    border-bottom: 2px solid var(--neon-purple);
-    box-shadow: 0 0 20px rgba(184, 41, 221, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--color-border);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 25px;
     flex-shrink: 0;
-    position: relative;
-}
-
-.header::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--neon-purple), var(--neon-blue), var(--neon-purple), transparent);
-    animation: glowLine 3s ease-in-out infinite;
-}
-
-@keyframes glowLine {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
 }
 
 .header-brand {
@@ -115,30 +129,27 @@ html, body {
     width: 44px;
     height: 44px;
     object-fit: contain;
-    filter: brightness(1.4) contrast(1.2) saturate(1.1) drop-shadow(0 0 15px rgba(184, 41, 221, 0.8));
 }
 
 .logo {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
-    background: linear-gradient(135deg, #fff 0%, var(--neon-blue) 100%);
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--color-bit) 0%, var(--color-dog) 50%, var(--color-lab) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
-    letter-spacing: -0.5px;
 }
 
 .badge {
-    background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
     color: white;
     font-size: 11px;
-    font-weight: 800;
-    padding: 4px 10px;
+    font-weight: 700;
+    padding: 5px 12px;
     border-radius: 20px;
     text-transform: uppercase;
-    box-shadow: 0 0 15px rgba(255, 16, 240, 0.5);
-    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 2px 10px rgba(233, 30, 140, 0.3);
 }
 
 .header-controls {
@@ -147,102 +158,72 @@ html, body {
     gap: 12px;
 }
 
-/* Buttons Neon */
+/* Buttons - Estilo BitDogLab */
 .btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 18px;
+    gap: 8px;
+    padding: 12px 24px;
     border: none;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: var(--radius-lg);
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     white-space: nowrap;
-    position: relative;
-    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left 0.5s;
-}
-
-.btn:hover::before {
-    left: 100%;
+.btn:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .btn:disabled {
-    opacity: 0.4;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
 .btn-connect {
-    background: linear-gradient(135deg, var(--neon-green) 0%, #2ecc71 100%);
-    color: #000;
-    box-shadow: 0 0 15px var(--color-success-glow);
-    border: 1px solid rgba(57, 255, 20, 0.5);
-}
-
-.btn-connect:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px var(--color-success-glow);
+    background: linear-gradient(135deg, #00C9A7 0%, #00B894 100%);
+    color: white;
 }
 
 .btn-disconnect {
-    background: linear-gradient(135deg, var(--color-danger) 0%, #ff1744 100%);
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
     color: white;
-    box-shadow: 0 0 15px var(--color-danger-glow);
-    border: 1px solid rgba(255, 56, 96, 0.5);
-}
-
-.btn-disconnect:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px var(--color-danger-glow);
 }
 
 .btn-small {
-    padding: 6px 14px;
-    font-size: 12px;
-    background: var(--color-bg-tertiary);
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: var(--radius-sm);
+    background: white;
     color: var(--color-text);
-    border: 1px solid var(--color-border);
+    border: 2px solid var(--color-border);
 }
 
 .btn-small:hover {
-    background: var(--color-primary);
-    box-shadow: var(--glow-sm);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
 }
 
 .btn-send {
-    background: linear-gradient(135deg, var(--neon-blue) 0%, #0099cc 100%);
-    color: #000;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
-}
-
-.btn-send:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(0, 212, 255, 0.6);
+    background: linear-gradient(135deg, var(--color-bit) 0%, var(--color-primary) 100%);
+    color: white;
 }
 
 .btn-ctrl {
     background: var(--color-bg-tertiary);
-    color: var(--neon-purple);
-    border: 1px solid var(--neon-purple);
-    box-shadow: 0 0 10px rgba(184, 41, 221, 0.2);
+    color: var(--color-accent);
+    border: 1px solid var(--color-accent);
+    box-shadow: 0 0 10px rgba(227, 26, 139, 0.2);
 }
 
 .btn-ctrl:hover:not(:disabled) {
-    background: var(--neon-purple);
+    background: var(--color-accent);
     color: white;
-    box-shadow: 0 0 20px rgba(184, 41, 221, 0.5);
+    box-shadow: 0 0 20px rgba(227, 26, 139, 0.5);
 }
 
 .btn-icon {
@@ -264,8 +245,8 @@ html, body {
 
 .select:focus {
     outline: none;
-    border-color: var(--neon-purple);
-    box-shadow: 0 0 15px rgba(184, 41, 221, 0.3), inset 0 0 10px rgba(0,0,0,0.3);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 15px rgba(227, 26, 139, 0.3), inset 0 0 10px rgba(0,0,0,0.3);
 }
 
 .select-small {
@@ -303,12 +284,12 @@ html, body {
 }
 
 .status-dot.connected {
-    background: var(--neon-green);
-    box-shadow: 0 0 15px var(--neon-green);
+    background: var(--color-success);
+    box-shadow: 0 0 15px var(--color-success);
 }
 
 .status-dot.connected::after {
-    border-color: var(--neon-green);
+    border-color: var(--color-success);
 }
 
 .status-dot.disconnected {
@@ -345,24 +326,25 @@ html, body {
 }
 
 /* ============================================
-   TERMINAL - Tema Roxo Neon
+   TERMINAL
    ============================================ */
 .terminal-container {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: var(--color-bg);
+    background: var(--color-preto);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
 }
 
 .terminal-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    background: var(--color-bg-secondary);
-    border-bottom: 1px solid var(--color-border);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
 }
 
 .terminal-controls {
@@ -372,28 +354,24 @@ html, body {
 }
 
 .terminal-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    font-family: 'Nunito', sans-serif;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
 .terminal-title::before {
-    content: '>';
-    color: var(--color-text-muted);
+    content: '⚡';
 }
 
 .terminal {
     flex: 1;
-    padding: 15px;
+    padding: 20px;
     overflow: hidden;
-    background: var(--color-bg);
-    background-image: 
-        radial-gradient(circle at 10% 20%, rgba(157, 78, 221, 0.05) 0%, transparent 40%),
-        radial-gradient(circle at 90% 80%, rgba(0, 212, 255, 0.04) 0%, transparent 40%);
+    background: #1a1a2e;
 }
 
 .terminal .xterm {
@@ -413,47 +391,44 @@ html, body {
 
 /* Estilo das linhas do terminal */
 .terminal .xterm-rows {
-    font-size: 12.5px;
-    line-height: 1.25;
-    color: #89b4fa;
+    font-size: 13px;
+    line-height: 1.4;
+    color: #EAEAEA;
 }
 
 /* Cursor do terminal */
 .terminal .xterm-cursor {
-    background-color: #b829dd !important;
+    background-color: #E91E8C !important;
 }
 
 /* Seleção no terminal */
 .terminal .xterm-selection div {
-    background-color: rgba(137, 180, 250, 0.3) !important;
+    background-color: rgba(233, 30, 140, 0.3) !important;
 }
 
 .terminal-input-area {
     display: flex;
     gap: 10px;
     padding: 15px 20px;
-    background: var(--color-bg-secondary);
-    border-top: 1px solid var(--color-border);
-    box-shadow: 0 -5px 30px rgba(0,0,0,0.3);
+    background: #16213e;
+    border-top: 1px solid #0f3460;
 }
 
 .terminal-input {
     flex: 1;
-    padding: 12px 16px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg);
-    color: var(--color-text);
+    padding: 12px 18px;
+    border: 2px solid #0f3460;
+    border-radius: 20px;
+    background: #1a1a2e;
+    color: white;
     font-size: 14px;
-    font-family: 'SF Mono', Monaco, monospace;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    font-family: 'Nunito', monospace;
     transition: all 0.2s ease;
 }
 
 .terminal-input:focus {
     outline: none;
-    border-color: var(--neon-blue);
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 0 0 15px rgba(0, 212, 255, 0.2);
+    border-color: #E91E8C;
 }
 
 .terminal-input:disabled {
@@ -462,7 +437,7 @@ html, body {
 }
 
 /* ============================================
-   SCROLLBAR - Roxo Neon
+   SCROLLBAR
    ============================================ */
 ::-webkit-scrollbar {
     width: 8px;
@@ -480,15 +455,15 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--neon-purple);
-    box-shadow: 0 0 10px var(--neon-purple);
+    background: var(--color-accent);
+    box-shadow: 0 0 10px var(--color-accent);
 }
 
 /* ============================================
-   SELECTION - Roxo
+   SELECTION
    ============================================ */
 ::selection {
-    background: rgba(157, 78, 221, 0.4);
+    background: rgba(227, 26, 139, 0.4);
     color: white;
 }
 
@@ -540,7 +515,7 @@ html, body {
 }
 
 /* ============================================
-   NAVEGAÇÃO [CLAUDE]
+   NAVEGAÇÃO
    ============================================ */
 .header-nav {
     display: flex;
@@ -550,16 +525,16 @@ html, body {
 .nav-btn {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
+    gap: 8px;
+    padding: 10px 20px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-lg);
     background: transparent;
     color: var(--color-text-secondary);
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .nav-btn .material-icons {
@@ -572,9 +547,9 @@ html, body {
 }
 
 .nav-btn.active {
-    background: var(--color-accent);
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
     color: white;
-    box-shadow: 0 0 15px var(--color-accent-glow);
+    box-shadow: 0 4px 15px rgba(233, 30, 140, 0.3);
 }
 
 /* Seções - mostrar/esconder */
@@ -587,26 +562,27 @@ html, body {
 }
 
 /* ============================================
-   LOGIN / USER INFO [CLAUDE]
+   LOGIN / USER INFO
    ============================================ */
 .btn-login {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: white;
-    color: #333;
-    border: 1px solid #ddd;
-    border-radius: var(--radius-sm);
-    font-weight: 600;
-    font-size: 13px;
+    color: var(--color-text);
+    border: 2px solid #E0E0E0;
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .btn-login:hover {
-    background: #f5f5f5;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    border-color: var(--color-bit);
+    color: var(--color-bit);
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.2);
 }
 
 .google-icon {
@@ -621,11 +597,11 @@ html, body {
 }
 
 .user-avatar {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 2px solid var(--neon-purple);
-    box-shadow: 0 0 10px rgba(184, 41, 221, 0.3);
+    border: 3px solid var(--color-accent);
+    box-shadow: 0 4px 10px rgba(233, 30, 140, 0.3);
 }
 
 .user-name {
@@ -645,7 +621,7 @@ html, body {
 }
 
 /* ============================================
-   HOME - GRID DE PROJETOS [CLAUDE]
+   HOME - GRID DE PROJETOS
    ============================================ */
 .home-section {
     width: 100%;
@@ -668,30 +644,27 @@ html, body {
 }
 
 .home-title {
-    font-size: 24px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #fff 0%, var(--neon-blue) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--color-text);
 }
 
 .btn-add {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    background: linear-gradient(135deg, var(--neon-purple) 0%, var(--color-accent) 100%);
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
     color: white;
-    border: 1px solid rgba(184, 41, 221, 0.5);
-    box-shadow: 0 0 15px rgba(184, 41, 221, 0.3);
-    font-size: 14px;
-    font-weight: 600;
+    border-radius: var(--radius-lg);
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(233, 30, 140, 0.3);
 }
 
 .btn-add:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(184, 41, 221, 0.5);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(233, 30, 140, 0.4);
 }
 
 .btn-add .material-icons {
@@ -712,39 +685,26 @@ html, body {
     padding: 60px 20px;
 }
 
-/* Cards de Projeto */
+/* Cards de Projeto - Estilo BitDogLab */
 .project-card {
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
-    padding: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid transparent;
+    border-radius: 20px;
+    padding: 0;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-}
-
-.project-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .project-card:hover {
-    border-color: var(--neon-purple);
-    transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(184, 41, 221, 0.2);
+    border-color: var(--color-accent);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 40px rgba(233, 30, 140, 0.2);
 }
 
-.project-card:hover::before {
-    opacity: 1;
-}
+
 
 .project-card-title {
     font-size: 16px;
@@ -793,7 +753,7 @@ html, body {
 }
 
 /* ============================================
-   MODAL [CLAUDE]
+   MODAL
    ============================================ */
 .modal-overlay {
     display: none;
@@ -814,19 +774,22 @@ html, body {
 }
 
 .modal {
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 2px solid var(--color-border);
+    border-radius: 25px;
     padding: 32px;
     width: 90%;
     max-width: 440px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(184, 41, 221, 0.15);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .modal-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--color-text);
+    font-size: 24px;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--color-bit) 0%, var(--color-dog) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-bottom: 8px;
 }
 
@@ -850,21 +813,22 @@ html, body {
 
 .form-input,
 .form-textarea {
-    padding: 12px 16px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg);
+    padding: 14px 18px;
+    border: 2px solid #E0E0E0;
+    border-radius: 15px;
+    background: #FAFAFA;
     color: var(--color-text);
-    font-size: 14px;
+    font-size: 15px;
     font-family: inherit;
-    transition: border-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .form-input:focus,
 .form-textarea:focus {
     outline: none;
-    border-color: var(--neon-purple);
-    box-shadow: 0 0 15px rgba(184, 41, 221, 0.2);
+    border-color: var(--color-accent);
+    background: white;
+    box-shadow: 0 4px 15px rgba(233, 30, 140, 0.15);
 }
 
 .form-textarea {
@@ -879,28 +843,29 @@ html, body {
 }
 
 .form-warning {
-    font-size: 11px;
-    color: #ffd700;
+    font-size: 12px;
+    color: var(--color-accent);
+    font-weight: 600;
     margin: -4px 0 4px 0;
 }
 
 .btn-save {
     margin-top: 8px;
-    padding: 12px;
-    background: linear-gradient(135deg, var(--neon-purple) 0%, var(--color-accent) 100%);
+    padding: 14px 24px;
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
     color: white;
     border: none;
-    border-radius: var(--radius-sm);
-    font-size: 15px;
+    border-radius: var(--radius-lg);
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 15px rgba(184, 41, 221, 0.3);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(233, 30, 140, 0.3);
 }
 
 .btn-save:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 25px rgba(184, 41, 221, 0.5);
+    box-shadow: 0 0 25px rgba(227, 26, 139, 0.5);
 }
 
 .btn-save:disabled {
@@ -916,7 +881,7 @@ html, body {
 }
 
 /* ============================================
-   MODAL LARGE (Upload de Projeto) [CLAUDE]
+   MODAL LARGE (Upload de Projeto)
    ============================================ */
 .modal-large {
     max-width: 560px;
@@ -948,35 +913,39 @@ html, body {
 
 /* File Input */
 .form-file {
-    padding: 10px;
-    border: 1px dashed var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg);
+    padding: 15px;
+    border: 2px dashed #E0E0E0;
+    border-radius: 15px;
+    background: #FAFAFA;
     color: var(--color-text-secondary);
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
-    transition: border-color 0.2s ease;
+    transition: all 0.3s ease;
+    width: 100%;
 }
 
 .form-file:hover {
-    border-color: var(--neon-purple);
+    border-color: var(--color-accent);
+    background: #FFF0F5;
 }
 
 .form-file::file-selector-button {
-    padding: 6px 12px;
-    margin-right: 10px;
-    border: 1px solid var(--color-border);
-    border-radius: 4px;
-    background: var(--color-bg-tertiary);
-    color: var(--color-text);
-    font-size: 12px;
+    padding: 10px 18px;
+    margin-right: 15px;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(233, 30, 140, 0.3);
 }
 
 .form-file::file-selector-button:hover {
-    background: var(--color-primary);
-    border-color: var(--neon-purple);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(233, 30, 140, 0.4);
 }
 
 /* Upload Progress */
@@ -986,17 +955,16 @@ html, body {
 
 .progress-bar {
     width: 100%;
-    height: 8px;
-    background: var(--color-bg);
-    border-radius: 4px;
+    height: 10px;
+    background: #E0E0E0;
+    border-radius: 5px;
     overflow: hidden;
-    border: 1px solid var(--color-border);
 }
 
 .progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--neon-purple), var(--neon-blue));
+    background: linear-gradient(90deg, var(--color-accent), var(--color-primary));
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -1009,7 +977,7 @@ html, body {
 }
 
 /* ============================================
-   PÁGINA DE DETALHES DO PROJETO [CLAUDE]
+   PÁGINA DE DETALHES DO PROJETO
    ============================================ */
 .detail-section {
     width: 100%;
@@ -1031,39 +999,43 @@ html, body {
 .btn-back {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--color-bg-tertiary);
+    gap: 8px;
+    padding: 10px 20px;
+    background: white;
     color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-size: 13px;
+    border: 2px solid #E0E0E0;
+    border-radius: var(--radius-lg);
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .btn-back:hover {
-    background: var(--color-primary);
-    color: var(--color-text);
+    border-color: var(--color-bit);
+    color: var(--color-bit);
+    transform: translateY(-2px);
 }
 
 .btn-edit {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--color-bg-tertiary);
-    color: var(--neon-blue);
-    border: 1px solid var(--neon-blue);
-    border-radius: var(--radius-sm);
-    font-size: 13px;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--color-dog) 0%, var(--color-accent) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(233, 30, 140, 0.3);
 }
 
 .btn-edit:hover {
-    background: var(--neon-blue);
-    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(233, 30, 140, 0.4);
 }
 
 .detail-header {
@@ -1096,7 +1068,7 @@ html, body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    border: 2px solid var(--neon-purple);
+    border: 2px solid var(--color-accent);
 }
 
 .detail-author-name {
@@ -1125,15 +1097,16 @@ html, body {
 }
 
 .detail-section-title .material-icons {
-    color: var(--neon-purple);
+    color: var(--color-accent);
     font-size: 22px;
 }
 
 .detail-body > .detail-section {
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 20px;
     padding: 24px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .detail-description {
@@ -1147,9 +1120,9 @@ html, body {
     position: relative;
     width: 100%;
     padding-bottom: 56.25%;
-    border-radius: var(--radius-sm);
+    border-radius: 15px;
     overflow: hidden;
-    background: var(--color-bg);
+    background: #000;
 }
 
 .video-player {
@@ -1166,16 +1139,16 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-    transition: border-color 0.2s ease;
+    padding: 15px 20px;
+    background: #FAFAFA;
+    border: 2px solid #E0E0E0;
+    border-radius: 15px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
 }
 
 .file-item:hover {
-    border-color: var(--neon-purple);
+    border-color: var(--color-accent);
 }
 
 .file-info {
@@ -1185,7 +1158,7 @@ html, body {
 }
 
 .file-icon {
-    color: var(--neon-blue);
+    color: var(--color-primary);
     font-size: 24px;
 }
 
@@ -1209,27 +1182,39 @@ html, body {
 .btn-preview {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    color: var(--neon-blue);
-    border-color: var(--neon-blue);
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    color: var(--color-bit);
+    border: 2px solid var(--color-bit);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .btn-preview:hover {
-    background: var(--neon-blue);
-    color: #000;
+    background: var(--color-bit);
+    color: white;
+    transform: translateY(-2px);
 }
 
 .btn-download {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    color: var(--neon-green);
-    border-color: var(--neon-green);
+    gap: 6px;
+    padding: 8px 16px;
+    background: white;
+    color: #00B894;
+    border: 2px solid #00B894;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .btn-download:hover {
-    background: var(--neon-green);
-    color: #000;
+    background: #00B894;
+    color: white;
+    transform: translateY(-2px);
 }
 
 .btn-preview .material-icons,
@@ -1240,21 +1225,23 @@ html, body {
 /* Guias de PDF */
 .guide-item {
     margin-bottom: 20px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+    border: 2px solid var(--color-border);
+    border-radius: 15px;
     overflow: hidden;
+    background: white;
 }
 
 .guide-header {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
-    background: var(--color-bg);
+    padding: 15px 20px;
+    background: #FAFAFA;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .guide-header .material-icons {
-    color: #ff3860;
+    color: var(--color-accent);
     font-size: 22px;
 }
 
@@ -1276,7 +1263,7 @@ html, body {
 
 .guide-preview {
     width: 100%;
-    background: var(--color-bg);
+    background: white;
 }
 
 .pdf-viewer {
@@ -1290,22 +1277,24 @@ html, body {
 .extra-link {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 10px 16px;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+    gap: 8px;
+    padding: 12px 20px;
+    background: white;
+    border: 2px solid #E0E0E0;
+    border-radius: var(--radius-lg);
     color: var(--color-text-secondary);
     text-decoration: none;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     margin-right: 8px;
     margin-bottom: 8px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .extra-link:hover {
-    border-color: var(--neon-purple);
-    color: var(--color-text);
+    border-color: var(--color-bit);
+    color: var(--color-bit);
+    transform: translateY(-2px);
 }
 
 /* Botão Flashear */
@@ -1317,22 +1306,22 @@ html, body {
 .btn-flash {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 14px 32px;
-    background: linear-gradient(135deg, var(--neon-green) 0%, #2ecc71 100%);
-    color: #000;
-    border: 1px solid rgba(57, 255, 20, 0.5);
-    border-radius: var(--radius-sm);
-    font-size: 16px;
-    font-weight: 700;
+    gap: 10px;
+    padding: 16px 40px;
+    background: linear-gradient(135deg, #00C9A7 0%, #00B894 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 18px;
+    font-weight: 800;
     cursor: pointer;
-    box-shadow: 0 0 20px var(--color-success-glow);
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px rgba(0, 201, 167, 0.4);
+    transition: all 0.3s ease;
 }
 
 .btn-flash:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 30px var(--color-success-glow);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 201, 167, 0.5);
 }
 
 .btn-flash .material-icons {
@@ -1347,9 +1336,9 @@ html, body {
 
 /* Code Preview */
 .code-preview {
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+    background: #1a1a2e;
+    border: 2px solid #0f3460;
+    border-radius: 15px;
     padding: 20px;
     overflow-x: auto;
     max-height: 500px;
@@ -1358,10 +1347,10 @@ html, body {
 }
 
 .code-preview code {
-    font-family: 'SF Mono', Monaco, Consolas, monospace;
-    font-size: 13px;
+    font-family: 'Nunito', monospace;
+    font-size: 14px;
     line-height: 1.6;
-    color: var(--neon-blue);
+    color: #EAEAEA;
     white-space: pre;
 }
 
@@ -1457,7 +1446,6 @@ html, body {
     height: 36px;
     object-fit: contain;
     margin-left: 8px;
-    filter: drop-shadow(0 0 8px rgba(184, 41, 221, 0.6));
     transition: transform 0.3s ease;
 }
 
@@ -1466,7 +1454,7 @@ html, body {
 }
 
 /* ============================================
-   BACKGROUND - Cachorro BitDogLab
+   BACKGROUND - Elemento Visual
    ============================================ */
 .app::before {
     content: '';
@@ -1490,11 +1478,5 @@ html, body {
 
 
 
-/* Logo no header */
-.header-logo-img {
-    width: 32px;
-    height: 32px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
+
 
