@@ -889,49 +889,32 @@ html, body {
     color: var(--color-danger);
 }
 
-/* Link para documento BNCC */
-.bncc-doc-link {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 15px 20px;
-    background: linear-gradient(135deg, #E8F4FD 0%, #F0F9FF 100%);
-    border: 2px solid #BAE6FD;
-    border-radius: 15px;
-    margin-bottom: 20px;
-}
-
-.bncc-doc-link .material-icons {
-    color: var(--color-bit);
-    font-size: 24px;
-}
-
-.bncc-doc-link p {
-    margin: 0 0 5px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-text);
-}
-
-.bncc-doc-link a {
+/* Link para documento BNCC (inline) */
+.bncc-doc-inline {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    margin-left: 10px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #E8F4FD 0%, #F0F9FF 100%);
+    border: 1px solid #BAE6FD;
+    border-radius: 20px;
     color: var(--color-bit);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     text-decoration: none;
     transition: all 0.2s ease;
+    vertical-align: middle;
 }
 
-.bncc-doc-link a:hover {
-    color: var(--color-primary-dark);
-    text-decoration: underline;
+.bncc-doc-inline:hover {
+    background: var(--color-bit);
+    color: white;
+    border-color: var(--color-bit);
 }
 
-.bncc-doc-link a .material-icons {
+.bncc-doc-inline .material-icons {
     font-size: 14px;
-    color: inherit;
 }
 
 /* Tag input (GitHub-style) */
