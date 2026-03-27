@@ -157,4 +157,33 @@ document.addEventListener('DOMContentLoaded', () => {
         term.writeln('\r\n\x1b[31mAviso: Seu navegador não suporta Web Serial API.\x1b[0m');
         term.writeln('\x1b[33mUse Chrome, Edge ou Opera para conectar sua placa.\x1b[0m');
     }
+
+    // ==========================================
+    // Flash Manager - Integração para envio de código
+    // ==========================================
+    
+    // Inicializa FlashManager com a instância do WebSerial
+    const flashManager = new FlashManager(serial);
+    window.flashManager = flashManager;
+
+    // Configura callbacks de progresso e status
+    flashManager.onProgress((percent) => {
+        // O Claude pode implementar uma barra de progresso na UI
+        if (window.onFlashProgress) {
+            window.onFlashProgress(percent);
+        }
+    });
+
+    flashManager.onStatus((message) => {
+        // Mostra status no terminal também
+        term.writeln(`\r\n\x1b[36m[Flash] ${message}\x1b[0m`);
+        
+        // O Claude pode implementar notificação na UI
+        if (window.onFlashStatus) {
+            window.onFlashStatus(message);
+        }
+    });
+
+    // Expose serial instance globally for flash.js
+    window.webSerial = serial;
 });
