@@ -1047,6 +1047,31 @@ html, body {
     color: var(--color-text);
 }
 
+.btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--color-bg-tertiary);
+    color: var(--neon-blue);
+    border: 1px solid var(--neon-blue);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit:hover {
+    background: var(--neon-blue);
+    color: #000;
+}
+
+.detail-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .detail-body {
     display: flex;
     flex-direction: column;

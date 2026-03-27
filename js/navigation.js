@@ -24,11 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // Mostra controles serial apenas na aba terminal
-            if (targetId === 'terminalSection') {
+            // Mostra controles serial na aba terminal e na página do projeto
+            if (targetId === 'terminalSection' || targetId === 'projectDetailSection') {
                 serialControls.style.display = 'flex';
-                // xterm precisa de refresh quando a aba fica visível
-                window.dispatchEvent(new Event('terminal-visible'));
+                if (targetId === 'terminalSection') {
+                    window.dispatchEvent(new Event('terminal-visible'));
+                }
             } else {
                 serialControls.style.display = 'none';
             }

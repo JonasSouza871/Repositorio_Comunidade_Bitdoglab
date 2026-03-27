@@ -20,12 +20,15 @@ async function openProjectDetail(projectId) {
         currentProject = doc.data();
         renderProjectDetail(currentProject);
 
-        // Mostra seção de detalhes, esconde home
-        document.getElementById('homeSection').classList.remove('active');
+        // Mostra seção de detalhes, esconde todas as outras
+        document.querySelectorAll('.main > section').forEach(s => s.classList.remove('active'));
         document.getElementById('projectDetailSection').classList.add('active');
 
         // Atualiza navegação
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+        // Mostra controles serial (pra poder conectar e enviar pra placa)
+        document.getElementById('serialControls').style.display = 'flex';
 
     } catch (error) {
         console.error('Erro ao carregar projeto:', error);
@@ -57,6 +60,11 @@ function renderProjectDetail(project) {
             <button class="btn btn-back" onclick="backToHome()">
                 <span class="material-icons">arrow_back</span> Voltar
             </button>
+            ${isProjectOwner(project) ? `
+            <button class="btn btn-edit" onclick="openEditProjectModal()">
+                <span class="material-icons">edit</span> Editar Projeto
+            </button>
+            ` : ''}
         </div>
 
         <div class="detail-body">
@@ -88,16 +96,6 @@ function renderProjectDetail(project) {
                 </div>
             </div>
 
-            <!-- Arquivos do Projeto -->
-            <div class="detail-section">
-                <h2 class="detail-section-title">
-                    <span class="material-icons">folder</span> Arquivos do Projeto
-                </h2>
-                <div class="detail-files">
-                    ${renderProjectFiles(project)}
-                </div>
-            </div>
-
             <!-- Guias de Uso (PDFs) -->
             <div class="detail-section">
                 <h2 class="detail-section-title">
@@ -120,10 +118,20 @@ function renderProjectDetail(project) {
             </div>
             ` : ''}
 
-            <!-- Botão Flashear -->
+            <!-- Arquivos do Projeto -->
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">folder</span> Arquivos do Projeto
+                </h2>
+                <div class="detail-files">
+                    ${renderProjectFiles(project)}
+                </div>
+            </div>
+
+            <!-- Enviar para a Placa -->
             <div class="detail-section detail-flash">
                 <button class="btn btn-flash" onclick="flashCurrentProject()">
-                    <span class="material-icons">bolt</span> Flashear na Placa
+                    <span class="material-icons">bolt</span> Enviar para a Placa
                 </button>
                 <p class="flash-hint">Envia o código direto para a BitDogLab via WebSerial</p>
             </div>
@@ -340,39 +348,67 @@ function downloadPyFile(filename, fileIndex) {
     URL.revokeObjectURL(url);
 }
 
-// Flashear projeto atual na placa
+// Enviar projeto atual para a placa
 async function flashCurrentProject() {
     if (!currentProject) return;
 
     if (!window.flashManager || !window.webSerial?.connected) {
-        alert('Conecte a placa primeiro. Vá na aba Terminal e clique em Conectar.');
+        alert('Conecte a placa primeiro. Clique em "Conectar" no topo da página.');
         return;
     }
 
     if (!confirm('Enviar código para a placa? Isso vai sobrescrever o código atual.')) return;
 
-    try {
-        // Prepara conteúdo: main.py como blob URL e libs como blob URLs
-        const mainBlob = new Blob([currentProject.mainFile.content], { type: 'text/plain' });
-        const mainURL = URL.createObjectURL(mainBlob);
+    const fm = window.flashManager;
 
-        const libURLs = [];
-        if (currentProject.libraries) {
+    try {
+        fm.updateStatus('Iniciando envio...');
+
+        // Para execução atual
+        await fm.serial.sendCtrlC();
+        await fm.sleep(300);
+
+        // Entra no Raw REPL
+        fm.updateStatus('Entrando no Raw REPL...');
+        await fm.enterRawREPL();
+        await fm.sleep(500);
+
+        // Envia Main.py
+        fm.updateStatus('Enviando main.py...');
+        await fm.writeFile('main.py', currentProject.mainFile.content);
+        fm.updateStatus('main.py ✓');
+
+        // Envia bibliotecas com nome correto
+        if (currentProject.libraries && currentProject.libraries.length > 0) {
+            await fm.mkdir('lib');
             for (const lib of currentProject.libraries) {
-                const blob = new Blob([lib.content], { type: 'text/plain' });
-                libURLs.push(URL.createObjectURL(blob));
+                const libPath = `lib/${lib.name}`;
+                fm.updateStatus(`Enviando ${libPath}...`);
+                await fm.writeFile(libPath, lib.content);
+                fm.updateStatus(`${libPath} ✓`);
             }
         }
 
-        await window.flashToDevice(mainURL, libURLs);
+        // Sai do Raw REPL
+        fm.updateStatus('Saindo do Raw REPL...');
+        await fm.exitRawREPL();
+        await fm.sleep(200);
+
+        // Soft reset
+        fm.updateStatus('Reiniciando placa...');
+        await fm.serial.sendCtrlD();
+        await fm.sleep(500);
+
+        fm.updateStatus('Código enviado com sucesso!');
         alert('Código enviado com sucesso!');
 
-        // Limpa URLs temporárias
-        URL.revokeObjectURL(mainURL);
-        libURLs.forEach(url => URL.revokeObjectURL(url));
-
     } catch (error) {
-        alert(`Erro ao flashear: ${error.message}`);
+        // Tenta recuperar estado
+        try {
+            await fm.exitRawREPL();
+            await fm.serial.sendCtrlC();
+        } catch (e) {}
+        alert(`Erro ao enviar: ${error.message}`);
     }
 }
 
@@ -382,4 +418,112 @@ function formatSize(content) {
     const bytes = new Blob([content]).size;
     if (bytes < 1024) return `${bytes} B`;
     return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+// Verifica se o usuário logado é o dono do projeto
+function isProjectOwner(project) {
+    const user = auth.currentUser;
+    return user && project.authorId === user.uid;
+}
+
+// Abre modal de edição preenchido com dados do projeto atual
+function openEditProjectModal() {
+    if (!currentProject || !isProjectOwner(currentProject)) return;
+
+    document.getElementById('editProjectTitle').value = currentProject.title;
+    document.getElementById('editProjectDescription').value = currentProject.description;
+    document.getElementById('editProjectVideo').value = currentProject.videoURL;
+    document.getElementById('editPdfLinks').value = (currentProject.pdfLinks || []).join('\n');
+    document.getElementById('editExtraLinks').value = (currentProject.extraLinks || []).join('\n');
+    document.getElementById('editProjectModal').classList.add('active');
+}
+
+// Fecha modal de edição
+function closeEditProjectModal() {
+    document.getElementById('editProjectModal').classList.remove('active');
+}
+
+// Lê arquivo como texto (para edição de .py)
+function readEditFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error(`Erro ao ler ${file.name}`));
+        reader.readAsText(file);
+    });
+}
+
+// Salva edição do projeto
+async function saveProjectEdit() {
+    if (!currentProject || !currentProjectId) return;
+
+    const user = auth.currentUser;
+    if (!user || user.uid !== currentProject.authorId) {
+        alert('Você não tem permissão para editar este projeto.');
+        return;
+    }
+
+    const title = document.getElementById('editProjectTitle').value.trim();
+    const description = document.getElementById('editProjectDescription').value.trim();
+    const videoURL = document.getElementById('editProjectVideo').value.trim();
+    const pdfLinksText = document.getElementById('editPdfLinks').value.trim();
+    const extraLinksText = document.getElementById('editExtraLinks').value.trim();
+    const mainFileInput = document.getElementById('editMainFile');
+    const librariesInput = document.getElementById('editLibraries');
+
+    // Validações
+    if (!title) return alert('Preencha o nome do projeto.');
+    if (title.length > 100) return alert('Título muito longo. Máximo: 100 caracteres.');
+    if (!description) return alert('Preencha a descrição.');
+    if (description.length > 2000) return alert('Descrição muito longa. Máximo: 2000 caracteres.');
+    if (!videoURL) return alert('Coloque o link do vídeo.');
+    if (!pdfLinksText) return alert('Coloque pelo menos um link de PDF.');
+
+    const saveBtn = document.getElementById('saveEditBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvando...';
+
+    try {
+        const updateData = {
+            title: title,
+            description: description,
+            videoURL: videoURL,
+            pdfLinks: pdfLinksText.split('\n').map(l => l.trim()).filter(l => l),
+            extraLinks: extraLinksText ? extraLinksText.split('\n').map(l => l.trim()).filter(l => l) : [],
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // Se enviou novo Main.py, atualiza
+        if (mainFileInput.files[0]) {
+            const file = mainFileInput.files[0];
+            if (!file.name.endsWith('.py')) return alert('O arquivo principal deve ser .py');
+            if (file.size / 1024 > 100) return alert('Main.py muito grande. Máximo: 100KB.');
+            updateData.mainFile = { name: file.name, content: await readEditFileAsText(file) };
+        }
+
+        // Se enviou novas bibliotecas, atualiza
+        if (librariesInput.files.length > 0) {
+            const libs = [];
+            for (const file of librariesInput.files) {
+                if (!file.name.endsWith('.py')) return alert(`${file.name} não é .py`);
+                if (file.size / 1024 > 100) return alert(`${file.name} muito grande. Máximo: 100KB.`);
+                libs.push({ name: file.name, content: await readEditFileAsText(file) });
+            }
+            updateData.libraries = libs;
+        }
+
+        await db.collection('projects').doc(currentProjectId).update(updateData);
+
+        closeEditProjectModal();
+
+        // Recarrega o projeto
+        await openProjectDetail(currentProjectId);
+
+    } catch (error) {
+        console.error('Erro ao salvar edição:', error);
+        alert('Erro ao salvar. Tente novamente.');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Salvar Alterações';
+    }
 }

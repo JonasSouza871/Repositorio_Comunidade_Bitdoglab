@@ -109,6 +109,44 @@
         </main>
     </div>
 
+    <!-- Modal de Edição de Projeto [CLAUDE] -->
+    <div id="editProjectModal" class="modal-overlay">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title">Editar Projeto</h2>
+                <button class="modal-close" onclick="closeEditProjectModal()">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-form">
+                <label class="form-label" for="editProjectTitle">Nome do Projeto *</label>
+                <input type="text" id="editProjectTitle" class="form-input" maxlength="100">
+
+                <label class="form-label" for="editProjectDescription">Descrição *</label>
+                <textarea id="editProjectDescription" class="form-textarea" rows="4"></textarea>
+
+                <label class="form-label" for="editProjectVideo">Link do Vídeo *</label>
+                <input type="url" id="editProjectVideo" class="form-input">
+
+                <label class="form-label">Substituir Main.py <span class="form-hint">(deixe vazio para manter o atual)</span></label>
+                <input type="file" id="editMainFile" class="form-file" accept=".py">
+
+                <label class="form-label">Substituir Bibliotecas <span class="form-hint">(deixe vazio para manter as atuais)</span></label>
+                <input type="file" id="editLibraries" class="form-file" accept=".py" multiple>
+
+                <label class="form-label">Links dos PDFs * <span class="form-hint">(um por linha)</span></label>
+                <textarea id="editPdfLinks" class="form-textarea" rows="3"></textarea>
+
+                <label class="form-label">Links extras <span class="form-hint">(um por linha)</span></label>
+                <textarea id="editExtraLinks" class="form-textarea" rows="2"></textarea>
+
+                <button id="saveEditBtn" class="btn btn-save" onclick="saveProjectEdit()">
+                    <span class="material-icons">save</span> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Preview de Código [CLAUDE] -->
     <div id="codePreviewModal" class="modal-overlay">
         <div class="modal modal-large">
