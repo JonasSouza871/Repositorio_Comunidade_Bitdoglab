@@ -643,6 +643,95 @@ html, body {
     margin-bottom: 30px;
 }
 
+/* Barra de Busca */
+.search-container {
+    margin-bottom: 30px;
+}
+
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid #E0E0E0;
+    border-radius: 50px;
+    padding: 5px 5px 5px 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 4px 20px rgba(233, 30, 140, 0.15);
+}
+
+.search-icon {
+    color: var(--color-text-muted);
+    margin-right: 12px;
+    font-size: 22px;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    font-family: 'Nunito', sans-serif;
+    color: var(--color-text);
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: #B0B0B0;
+}
+
+.search-clear {
+    background: var(--color-bg-tertiary);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.search-clear:hover {
+    background: var(--color-accent);
+    color: white;
+}
+
+.search-info {
+    margin-top: 15px;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.search-info strong {
+    color: var(--color-accent);
+}
+
+.search-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+.empty-search {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-muted);
+}
+
+.empty-search .material-icons {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #E0E0E0;
+}
+
 .home-title {
     font-size: 28px;
     font-weight: 800;
@@ -753,6 +842,176 @@ html, body {
 .project-card-date {
     font-size: 11px;
     color: var(--color-text-muted);
+}
+
+/* Tags BNCC nos cards */
+.project-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 20px;
+    margin-bottom: 12px;
+}
+
+/* ============================================
+   BNCC TAGS
+   ============================================ */
+.bncc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 10px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(74, 144, 226, 0.12);
+    color: var(--color-primary);
+    border: 1px solid rgba(74, 144, 226, 0.25);
+    cursor: default;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.bncc-tag:hover {
+    background: rgba(74, 144, 226, 0.2);
+}
+
+.bncc-tag .tag-remove {
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 2px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+.bncc-tag .tag-remove:hover {
+    opacity: 1;
+    color: var(--color-danger);
+}
+
+/* Tag input (GitHub-style) */
+.bncc-tag-input-wrapper {
+    position: relative;
+}
+
+.bncc-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-secondary);
+    min-height: 44px;
+    cursor: text;
+    transition: border-color 0.2s;
+}
+
+.bncc-tags-container:focus-within {
+    border-color: var(--color-primary);
+}
+
+.bncc-tags-container .bncc-tag {
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+.bncc-tag-field {
+    flex: 1;
+    min-width: 140px;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    color: var(--color-text);
+    padding: 2px 4px;
+}
+
+.bncc-tag-field::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* Dropdown de sugestões */
+.bncc-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--color-bg-secondary);
+    border: 2px solid var(--color-primary);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.bncc-suggestions.active {
+    display: block;
+}
+
+.bncc-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.bncc-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.bncc-suggestion-item:hover,
+.bncc-suggestion-item.selected {
+    background: rgba(74, 144, 226, 0.1);
+}
+
+.bncc-suggestion-item .suggestion-code {
+    font-weight: 700;
+    color: var(--color-primary);
+    min-width: 80px;
+}
+
+.bncc-suggestion-item .suggestion-desc {
+    color: var(--color-text-secondary);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bncc-suggestion-item .suggestion-level {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
+.bncc-error-msg {
+    color: var(--color-danger);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+}
+
+/* Tags BNCC no detail */
+.detail-bncc-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.detail-bncc-tags .bncc-tag {
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: help;
 }
 
 /* ============================================

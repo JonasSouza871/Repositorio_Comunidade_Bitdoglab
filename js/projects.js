@@ -17,6 +17,12 @@ const LIMITS = {
     MAX_EXTRA_LINKS: 5            // Máximo 5 links extras
 };
 
+// Estado das tags BNCC por modal
+const bnccTagState = {
+    project: [],  // tags do modal de novo projeto
+    edit: []      // tags do modal de edição
+};
+
 // Abre modal de novo projeto
 function openProjectModal() {
     const user = auth.currentUser;
@@ -25,6 +31,7 @@ function openProjectModal() {
         return;
     }
     document.getElementById('projectModal').classList.add('active');
+    initBnccTagInput('project');
 }
 
 // Fecha modal de novo projeto
@@ -44,6 +51,8 @@ function clearProjectForm() {
     document.getElementById('projectExtraLinks').value = '';
     document.getElementById('projectImage').value = '';
     document.getElementById('uploadProgress').style.display = 'none';
+    bnccTagState.project = [];
+    renderBnccTags('project');
 }
 
 // Lê arquivo .py como texto
@@ -188,6 +197,7 @@ async function publishProject() {
             libraries: libraries,
             pdfLinks: pdfLinks,
             extraLinks: extraLinks,
+            bnccCodes: bnccTagState.project.slice(),
             commentCount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -215,4 +225,162 @@ async function publishProject() {
     } finally {
         publishBtn.disabled = false;
     }
+}
+
+// ============================================
+// BNCC Tag Input Component
+// ============================================
+
+/**
+ * Inicializa o input de tags BNCC para um modal
+ * @param {string} prefix - 'project' ou 'edit'
+ */
+function initBnccTagInput(prefix) {
+    const input = document.getElementById(`${prefix}BnccInput`);
+    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
+    let selectedIndex = -1;
+
+    // Remove listeners antigos clonando o input
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+
+    newInput.addEventListener('input', () => {
+        const query = newInput.value.trim();
+        selectedIndex = -1;
+        if (query.length < 2) {
+            suggestions.classList.remove('active');
+            suggestions.innerHTML = '';
+            return;
+        }
+        showBnccSuggestions(prefix, query);
+    });
+
+    newInput.addEventListener('keydown', (e) => {
+        const items = suggestions.querySelectorAll('.bncc-suggestion-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            updateSuggestionSelection(items, selectedIndex);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, 0);
+            updateSuggestionSelection(items, selectedIndex);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                const code = items[selectedIndex].dataset.code;
+                addBnccTag(prefix, code);
+            } else {
+                // Tenta adicionar o que foi digitado diretamente
+                tryAddBnccCode(prefix, newInput.value.trim());
+            }
+        } else if (e.key === 'Backspace' && !newInput.value) {
+            // Remove última tag
+            if (bnccTagState[prefix].length > 0) {
+                bnccTagState[prefix].pop();
+                renderBnccTags(prefix);
+            }
+        }
+    });
+
+    // Fecha sugestões ao clicar fora
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest(`#${prefix}BnccWrapper`)) {
+            suggestions.classList.remove('active');
+        }
+    });
+
+    // Clica no container foca no input
+    document.getElementById(`${prefix}BnccContainer`).addEventListener('click', () => {
+        document.getElementById(`${prefix}BnccInput`).focus();
+    });
+}
+
+function showBnccSuggestions(prefix, query) {
+    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
+    const results = searchBnccCodes(query).filter(r => !bnccTagState[prefix].includes(r.code));
+
+    if (results.length === 0) {
+        // Se parece um código BNCC mas não existe, mostra erro
+        const looksLikeCode = /^[A-Za-z]{2}\d{2}CO\d{2}$/i.test(query);
+        if (looksLikeCode) {
+            suggestions.innerHTML = `<div class="bncc-error-msg">Código "${query.toUpperCase()}" não encontrado na BNCC de Computação.</div>`;
+        } else {
+            suggestions.innerHTML = `<div class="bncc-error-msg">Nenhum resultado para "${query}".</div>`;
+        }
+        suggestions.classList.add('active');
+        return;
+    }
+
+    suggestions.innerHTML = results.slice(0, 8).map(r => `
+        <div class="bncc-suggestion-item" data-code="${r.code}">
+            <span class="suggestion-code">${r.code}</span>
+            <span class="suggestion-desc">${r.description}</span>
+            <span class="suggestion-level">${r.level}</span>
+        </div>
+    `).join('');
+
+    suggestions.querySelectorAll('.bncc-suggestion-item').forEach(item => {
+        item.addEventListener('click', () => {
+            addBnccTag(prefix, item.dataset.code);
+        });
+    });
+
+    suggestions.classList.add('active');
+}
+
+function updateSuggestionSelection(items, index) {
+    items.forEach((item, i) => {
+        item.classList.toggle('selected', i === index);
+    });
+    if (items[index]) {
+        items[index].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function tryAddBnccCode(prefix, value) {
+    if (!value) return;
+    const code = value.toUpperCase();
+    if (isValidBnccCode(code)) {
+        addBnccTag(prefix, code);
+    } else {
+        alert(`Código BNCC "${code}" não existe. Digite um código válido ou busque por palavra-chave.`);
+    }
+}
+
+function addBnccTag(prefix, code) {
+    code = code.toUpperCase();
+    if (bnccTagState[prefix].includes(code)) return;
+    bnccTagState[prefix].push(code);
+    renderBnccTags(prefix);
+
+    const input = document.getElementById(`${prefix}BnccInput`);
+    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
+    input.value = '';
+    suggestions.classList.remove('active');
+    suggestions.innerHTML = '';
+    input.focus();
+}
+
+function removeBnccTag(prefix, code) {
+    bnccTagState[prefix] = bnccTagState[prefix].filter(c => c !== code);
+    renderBnccTags(prefix);
+}
+
+function renderBnccTags(prefix) {
+    const container = document.getElementById(`${prefix}BnccContainer`);
+    const input = container.querySelector('.bncc-tag-field');
+
+    // Remove tags existentes (mantém o input)
+    container.querySelectorAll('.bncc-tag').forEach(el => el.remove());
+
+    // Adiciona tags antes do input
+    bnccTagState[prefix].forEach(code => {
+        const tag = document.createElement('span');
+        tag.className = 'bncc-tag';
+        tag.innerHTML = `${code} <span class="material-icons tag-remove" onclick="removeBnccTag('${prefix}', '${code}')">close</span>`;
+        tag.title = getBnccDescription(code);
+        container.insertBefore(tag, input);
+    });
 }

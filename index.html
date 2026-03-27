@@ -63,6 +63,19 @@
                             <span class="material-icons">add</span> Novo Projeto
                         </button>
                     </div>
+                    
+                    <!-- Barra de Busca -->
+                    <div class="search-container">
+                        <div class="search-box">
+                            <span class="material-icons search-icon">search</span>
+                            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por título ou código BNCC (ex: EF03MA01)...">
+                            <button class="search-clear" onclick="clearSearch()" style="display: none;">
+                                <span class="material-icons">close</span>
+                            </button>
+                        </div>
+                        <div id="searchInfo" class="search-info"></div>
+                    </div>
+                    
                     <div id="projectsGrid" class="projects-grid">
                         <p class="empty-message">Nenhum projeto ainda. Seja o primeiro a publicar!</p>
                     </div>
@@ -145,6 +158,14 @@
                 <label class="form-label">Links extras <span class="form-hint">(um por linha)</span></label>
                 <textarea id="editExtraLinks" class="form-textarea" rows="2"></textarea>
 
+                <label class="form-label">Códigos BNCC <span class="form-hint">(digite o código ou busque por tema)</span></label>
+                <div class="bncc-tag-input-wrapper" id="editBnccWrapper">
+                    <div class="bncc-tags-container" id="editBnccContainer">
+                        <input type="text" class="bncc-tag-field" id="editBnccInput" placeholder="Ex: EF06CO02, algoritmo..." autocomplete="off">
+                    </div>
+                    <div class="bncc-suggestions" id="editBnccSuggestions"></div>
+                </div>
+
                 <button id="saveEditBtn" class="btn btn-save" onclick="saveProjectEdit()">
                     <span class="material-icons">save</span> Salvar Alterações
                 </button>
@@ -201,6 +222,14 @@
                 <label class="form-label">Links extras - Google Drive <span class="form-hint">(um link por linha, máx. 5)</span></label>
                 <textarea id="projectExtraLinks" class="form-textarea" placeholder="https://drive.google.com/file/d/..." rows="2"></textarea>
 
+                <label class="form-label">Códigos BNCC <span class="form-hint">(digite o código ou busque por tema)</span></label>
+                <div class="bncc-tag-input-wrapper" id="projectBnccWrapper">
+                    <div class="bncc-tags-container" id="projectBnccContainer">
+                        <input type="text" class="bncc-tag-field" id="projectBnccInput" placeholder="Ex: EF06CO02, algoritmo..." autocomplete="off">
+                    </div>
+                    <div class="bncc-suggestions" id="projectBnccSuggestions"></div>
+                </div>
+
                 <div id="uploadProgress" class="upload-progress" style="display: none;">
                     <div class="progress-bar">
                         <div id="progressFill" class="progress-fill"></div>
@@ -240,10 +269,12 @@
     <script src="js/auth.js"></script>
 
     <!-- Plataforma -->
+    <script src="js/bncc-data.js"></script>
     <script src="js/projects.js"></script>
     <script src="js/home.js"></script>
     <script src="js/project-detail.js"></script>
     <script src="js/navigation.js"></script>
+    <script src="js/search.js"></script>
 
     <!-- WebSerial -->
     <script src="lib/xterm/xterm.js"></script>
