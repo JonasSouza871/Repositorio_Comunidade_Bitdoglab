@@ -108,6 +108,7 @@ async function publishProject() {
     if (!videoURL) return alert('Coloque o link do vídeo.');
     if (!mainFileInput.files[0]) return alert('Envie o arquivo Main.py.');
     if (!pdfLinksText) return alert('Coloque pelo menos um link de PDF.');
+    if (bnccTagState.project.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
 
     // Validação do vídeo
     if (!videoURL.includes('youtube') && !videoURL.includes('youtu.be') && !videoURL.includes('drive.google')) {

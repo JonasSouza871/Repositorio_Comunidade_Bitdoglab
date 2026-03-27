@@ -81,9 +81,14 @@ function renderProjectDetail(project) {
                 <span class="material-icons">arrow_back</span> Voltar
             </button>
             ${isProjectOwner(project) ? `
-            <button class="btn btn-edit" onclick="openEditProjectModal()">
-                <span class="material-icons">edit</span> Editar Projeto
-            </button>
+            <div class="owner-actions">
+                <button class="btn btn-edit" onclick="openEditProjectModal()">
+                    <span class="material-icons">edit</span> Editar
+                </button>
+                <button class="btn btn-delete" onclick="deleteCurrentProject()">
+                    <span class="material-icons">delete</span> Excluir
+                </button>
+            </div>
             ` : ''}
         </div>
 
@@ -522,6 +527,7 @@ async function saveProjectEdit() {
     if (description.length > 2000) return alert('Descrição muito longa. Máximo: 2000 caracteres.');
     if (!videoURL) return alert('Coloque o link do vídeo.');
     if (!pdfLinksText) return alert('Coloque pelo menos um link de PDF.');
+    if (bnccTagState.edit.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
 
     const saveBtn = document.getElementById('saveEditBtn');
     saveBtn.disabled = true;
@@ -575,5 +581,35 @@ async function saveProjectEdit() {
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Salvar Alterações';
+    }
+}
+
+// Deletar projeto atual
+async function deleteCurrentProject() {
+    if (!currentProject || !currentProjectId) return;
+    
+    const user = auth.currentUser;
+    if (!user || user.uid !== currentProject.authorId) {
+        alert('Você não tem permissão para excluir este projeto.');
+        return;
+    }
+    
+    if (!confirm('Tem certeza que deseja excluir este projeto?\n\nEsta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    try {
+        await db.collection('projects').doc(currentProjectId).delete();
+        
+        // Volta para a home
+        backToHome();
+        
+        // Recarrega a lista de projetos
+        loadProjects();
+        
+        alert('Projeto excluído com sucesso!');
+    } catch (error) {
+        console.error('Erro ao excluir projeto:', error);
+        alert('Erro ao excluir projeto. Tente novamente.');
     }
 }
