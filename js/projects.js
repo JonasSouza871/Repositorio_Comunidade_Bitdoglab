@@ -401,7 +401,7 @@ function renderBnccTags(prefix) {
         var code = bnccTagState[prefix][j];
         var tag = document.createElement('span');
         tag.className = 'bncc-tag';
-        tag.title = getBnccDescription(code) || code;
+        tag.setAttribute('data-bncc', code);
         tag.innerHTML = code + ' <span class="material-icons tag-remove" onclick="removeBnccTag(\'' + prefix + '\', \'' + code + '\')">close</span>';
         container.insertBefore(tag, input);
     }

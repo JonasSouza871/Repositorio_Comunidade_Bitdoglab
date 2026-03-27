@@ -891,7 +891,7 @@ html, body {
 
 /* Link para documento BNCC (inline) */
 .bncc-doc-inline {
-    display: inline-flex;
+    display: inline-flex !important;
     align-items: center;
     gap: 4px;
     margin-left: 10px;
@@ -899,22 +899,24 @@ html, body {
     background: linear-gradient(135deg, #E8F4FD 0%, #F0F9FF 100%);
     border: 1px solid #BAE6FD;
     border-radius: 20px;
-    color: var(--color-bit);
+    color: var(--color-bit) !important;
     font-size: 12px;
     font-weight: 700;
-    text-decoration: none;
+    text-decoration: none !important;
     transition: all 0.2s ease;
     vertical-align: middle;
+    white-space: nowrap;
 }
 
 .bncc-doc-inline:hover {
-    background: var(--color-bit);
-    color: white;
-    border-color: var(--color-bit);
+    background: var(--color-bit) !important;
+    color: white !important;
+    border-color: var(--color-bit) !important;
 }
 
 .bncc-doc-inline .material-icons {
     font-size: 14px;
+    color: inherit !important;
 }
 
 /* Tag input (GitHub-style) */
@@ -1040,6 +1042,40 @@ html, body {
     padding: 4px 12px;
     font-size: 12px;
     cursor: help;
+}
+
+/* Tooltip BNCC */
+.bncc-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: var(--color-lab);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-family: 'Nunito', sans-serif;
+    line-height: 1.5;
+    max-width: 320px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.bncc-tooltip.visible {
+    opacity: 1;
+}
+
+.bncc-tooltip .tooltip-code {
+    font-weight: 800;
+    color: var(--color-primary-light);
+}
+
+.bncc-tooltip .tooltip-level {
+    font-size: 10px;
+    color: var(--gradient-amarelo);
+    display: block;
+    margin-top: 2px;
 }
 
 /* ============================================

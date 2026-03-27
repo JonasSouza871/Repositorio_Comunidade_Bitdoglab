@@ -68,7 +68,7 @@ function createProjectCard(id, project) {
     // Tags BNCC
     const bnccHtml = (project.bnccCodes && project.bnccCodes.length > 0)
         ? `<div class="project-card-tags">${project.bnccCodes.slice(0, 4).map(code =>
-            `<span class="bncc-tag" title="${escapeHtml(getBnccDescription(code) || code)}">${escapeHtml(code)}</span>`
+            `<span class="bncc-tag" data-bncc="${escapeHtml(code)}">${escapeHtml(code)}</span>`
           ).join('')}${project.bnccCodes.length > 4 ? `<span class="bncc-tag">+${project.bnccCodes.length - 4}</span>` : ''}</div>`
         : '';
 

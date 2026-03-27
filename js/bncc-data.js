@@ -224,3 +224,85 @@ function searchBnccCodes(query) {
     }
     return results;
 }
+
+// ============================================
+// Tooltip global para tags BNCC
+// ============================================
+(function() {
+    // Cria elemento tooltip
+    var tooltip = document.createElement('div');
+    tooltip.className = 'bncc-tooltip';
+    document.body.appendChild(tooltip);
+
+    var hideTimeout = null;
+
+    function showTooltip(el) {
+        var code = el.getAttribute('data-bncc');
+        if (!code) return;
+
+        var desc = getBnccDescription(code);
+        var level = getBnccLevel(code);
+        if (!desc) return;
+
+        tooltip.innerHTML = '<span class="tooltip-code">' + code + '</span> — ' + desc
+            + (level ? '<span class="tooltip-level">' + level + '</span>' : '');
+
+        // Posiciona acima do elemento
+        var rect = el.getBoundingClientRect();
+        tooltip.style.left = rect.left + 'px';
+        tooltip.style.top = (rect.top - 8) + 'px';
+        tooltip.classList.add('visible');
+
+        // Ajusta posição após renderizar (pra saber a altura)
+        requestAnimationFrame(function() {
+            var tipRect = tooltip.getBoundingClientRect();
+            var top = rect.top - tipRect.height - 8;
+
+            // Se não cabe acima, mostra abaixo
+            if (top < 4) {
+                top = rect.bottom + 8;
+            }
+
+            // Ajusta horizontal se sai da tela
+            var left = rect.left;
+            if (left + tipRect.width > window.innerWidth - 8) {
+                left = window.innerWidth - tipRect.width - 8;
+            }
+            if (left < 4) left = 4;
+
+            tooltip.style.top = top + 'px';
+            tooltip.style.left = left + 'px';
+        });
+    }
+
+    function hideTooltip() {
+        tooltip.classList.remove('visible');
+    }
+
+    // Delegação de eventos global — funciona para qualquer tag BNCC presente ou futura
+    document.addEventListener('mouseover', function(e) {
+        var tag = e.target.closest('[data-bncc]');
+        if (tag) {
+            clearTimeout(hideTimeout);
+            showTooltip(tag);
+        }
+    });
+
+    document.addEventListener('mouseout', function(e) {
+        var tag = e.target.closest('[data-bncc]');
+        if (tag) {
+            hideTimeout = setTimeout(hideTooltip, 100);
+        }
+    });
+
+    // Suporte a toque (mobile) — toca pra ver, toca fora pra esconder
+    document.addEventListener('touchstart', function(e) {
+        var tag = e.target.closest('[data-bncc]');
+        if (tag) {
+            e.preventDefault();
+            showTooltip(tag);
+        } else {
+            hideTooltip();
+        }
+    });
+})();

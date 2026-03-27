@@ -109,7 +109,7 @@ function renderProjectDetail(project) {
                 </h2>
                 <div class="detail-bncc-tags">
                     ${project.bnccCodes.map(code =>
-                        `<span class="bncc-tag" title="${escapeHtml(getBnccDescription(code) || '')}">${escapeHtml(code)} — ${escapeHtml(getBnccDescription(code) || '')}</span>`
+                        `<span class="bncc-tag" data-bncc="${escapeHtml(code)}">${escapeHtml(code)}</span>`
                     ).join('')}
                 </div>
             </div>
