@@ -1476,7 +1476,7 @@ html, body {
     transform: translate(-50%, -50%);
     width: 600px;
     height: 600px;
-    background: url('../images/programming-nobg.png') no-repeat center center;
+    background: url('/images/programming-nobg.png') no-repeat center center;
     background-size: contain;
     opacity: 0.15;
     pointer-events: none;
@@ -1486,5 +1486,15 @@ html, body {
 .main {
     position: relative;
     z-index: 1;
+}
+
+
+
+/* Logo no header */
+.header-logo-img {
+    width: 32px;
+    height: 32px;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
