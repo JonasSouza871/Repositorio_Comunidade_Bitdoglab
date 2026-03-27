@@ -31,6 +31,26 @@ async function loadProjects() {
     }
 }
 
+// Converte link do Google Drive em thumbnail
+function getDirectImageUrl(url) {
+    if (!url) return '';
+    
+    // Google Drive - extrai file ID e converte para thumbnail
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+        // Usa o thumbnail do Google Drive (funciona melhor que uc?export=view)
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=s800`;
+    }
+    
+    // Dropbox - converte para link direto
+    if (url.includes('dropbox.com')) {
+        return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
+    }
+    
+    // Imgur já é direto
+    return url;
+}
+
 // Cria card de projeto
 function createProjectCard(id, project) {
     const card = document.createElement('div');
@@ -38,8 +58,15 @@ function createProjectCard(id, project) {
     card.onclick = () => openProjectDetail(id);
 
     const date = project.createdAt ? project.createdAt.toDate().toLocaleDateString('pt-BR') : '';
+    const directImageUrl = getDirectImageUrl(project.imageURL);
+    
+    // Sempre mostra o placeholder por baixo, imagem por cima
+    const imageHtml = directImageUrl 
+        ? `<div class="project-image-wrapper"><img src="${directImageUrl}" class="project-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'"><div class="project-image-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1"><span class="material-icons">image</span></div></div>`
+        : `<div class="project-image-placeholder"><span class="material-icons">image</span></div>`;
 
     card.innerHTML = `
+        ${imageHtml}
         <h3 class="project-card-title">${escapeHtml(project.title)}</h3>
         <p class="project-card-desc">${escapeHtml(project.description)}</p>
         <div class="project-card-footer">

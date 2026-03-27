@@ -3,6 +3,26 @@
  * Comunidade BitDogLab
  */
 
+// Converte link do Google Drive em thumbnail
+function getDirectImageUrl(url) {
+    if (!url) return '';
+    
+    // Google Drive - extrai file ID e converte para thumbnail
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+    if (driveMatch) {
+        // Usa o thumbnail do Google Drive (funciona melhor que uc?export=view)
+        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=s800`;
+    }
+    
+    // Dropbox - converte para link direto
+    if (url.includes('dropbox.com')) {
+        return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
+    }
+    
+    // Imgur já é direto
+    return url;
+}
+
 // Projeto atual carregado
 let currentProject = null;
 let currentProjectId = null;
@@ -68,6 +88,9 @@ function renderProjectDetail(project) {
         </div>
 
         <div class="detail-body">
+            <!-- Imagem de capa -->
+            ${project.imageURL ? `<img src="${getDirectImageUrl(project.imageURL)}" class="detail-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'">` : ''}
+            
             <!-- Info principal -->
             <h1 class="detail-title">${escapeHtml(project.title)}</h1>
             <div class="detail-author">
@@ -470,6 +493,7 @@ async function saveProjectEdit() {
     const extraLinksText = document.getElementById('editExtraLinks').value.trim();
     const mainFileInput = document.getElementById('editMainFile');
     const librariesInput = document.getElementById('editLibraries');
+    const imageURL = document.getElementById('editProjectImage').value.trim();
 
     // Validações
     if (!title) return alert('Preencha o nome do projeto.');
@@ -496,8 +520,8 @@ async function saveProjectEdit() {
         // Se enviou novo Main.py, atualiza
         if (mainFileInput.files[0]) {
             const file = mainFileInput.files[0];
-            if (!file.name.endsWith('.py')) return alert('O arquivo principal deve ser .py');
-            if (file.size / 1024 > 100) return alert('Main.py muito grande. Máximo: 100KB.');
+            if (!file.name.endsWith('.py')) throw new Error('O arquivo principal deve ser .py');
+            if (file.size / 1024 > 100) throw new Error('Main.py muito grande. Máximo: 100KB.');
             updateData.mainFile = { name: file.name, content: await readEditFileAsText(file) };
         }
 
@@ -505,11 +529,16 @@ async function saveProjectEdit() {
         if (librariesInput.files.length > 0) {
             const libs = [];
             for (const file of librariesInput.files) {
-                if (!file.name.endsWith('.py')) return alert(`${file.name} não é .py`);
-                if (file.size / 1024 > 100) return alert(`${file.name} muito grande. Máximo: 100KB.`);
+                if (!file.name.endsWith('.py')) throw new Error(`${file.name} não é .py`);
+                if (file.size / 1024 > 100) throw new Error(`${file.name} muito grande. Máximo: 100KB.`);
                 libs.push({ name: file.name, content: await readEditFileAsText(file) });
             }
             updateData.libraries = libs;
+        }
+
+        // Se preencheu nova imagem de capa, atualiza
+        if (imageURL) {
+            updateData.imageURL = imageURL;
         }
 
         await db.collection('projects').doc(currentProjectId).update(updateData);

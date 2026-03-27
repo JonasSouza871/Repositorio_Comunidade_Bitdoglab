@@ -42,6 +42,7 @@ function clearProjectForm() {
     document.getElementById('projectLibraries').value = '';
     document.getElementById('projectPdfLinks').value = '';
     document.getElementById('projectExtraLinks').value = '';
+    document.getElementById('projectImage').value = '';
     document.getElementById('uploadProgress').style.display = 'none';
 }
 
@@ -88,6 +89,7 @@ async function publishProject() {
     const librariesInput = document.getElementById('projectLibraries');
     const pdfLinksText = document.getElementById('projectPdfLinks').value.trim();
     const extraLinksText = document.getElementById('projectExtraLinks').value.trim();
+    const imageURL = document.getElementById('projectImage').value.trim();
 
     // Validações obrigatórias
     if (!title) return alert('Preencha o nome do projeto.');
@@ -178,6 +180,7 @@ async function publishProject() {
             title: title,
             description: description,
             videoURL: videoURL,
+            imageURL: imageURL,
             authorId: user.uid,
             authorName: userData.name || user.displayName,
             authorPhoto: userData.photoURL || user.photoURL || '',
