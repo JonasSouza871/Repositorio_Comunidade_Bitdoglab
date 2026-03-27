@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSerial</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="lib/xterm/xterm.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="header-brand">
+                <span class="logo">WebSerial</span>
+            </div>
+            <div class="header-controls">
+                <button id="connectBtn" class="btn btn-connect">Conectar</button>
+                <button id="disconnectBtn" class="btn btn-disconnect" disabled>Desconectar</button>
+                <div class="status-indicator">
+                    <span id="statusDot" class="status-dot disconnected"></span>
+                    <span id="statusText" class="status-text">Desconectado</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="main">
+            <section class="terminal-section" id="terminalSection">
+                <div class="terminal-container">
+                    <div class="terminal-toolbar">
+                        <span class="terminal-title">Terminal</span>
+                        <div class="terminal-controls">
+                            <select id="baudRate" class="select select-small">
+                                <option value="9600">9600</option>
+                                <option value="19200">19200</option>
+                                <option value="38400">38400</option>
+                                <option value="57600">57600</option>
+                                <option value="115200" selected>115200</option>
+                            </select>
+                            <button id="resetBtn" class="btn btn-small" disabled>Reset</button>
+                            <button id="stopBtn" class="btn btn-small" disabled>Parar</button>
+                            <button id="clearBtn" class="btn btn-small">Limpar</button>
+                        </div>
+                    </div>
+                    <div id="terminal" class="terminal"></div>
+                    <div class="terminal-input-area">
+                        <input 
+                            type="text" 
+                            id="commandInput" 
+                            class="terminal-input" 
+                            placeholder="Digite um comando..." 
+                            disabled
+                        >
+                        <button id="sendBtn" class="btn btn-send" disabled>Enviar</button>
+                        <button id="ctrlCBtn" class="btn btn-ctrl" disabled>Ctrl+C</button>
+                        <button id="ctrlDBtn" class="btn btn-ctrl" disabled>Ctrl+D</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="lib/xterm/xterm.js"></script>
+    <script src="js/webserial.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
