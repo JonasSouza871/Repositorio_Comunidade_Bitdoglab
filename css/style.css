@@ -690,7 +690,7 @@ html, body {
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid transparent;
     border-radius: 20px;
-    padding: 0;
+    padding: 0 0 20px 0;
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
@@ -711,6 +711,7 @@ html, body {
     font-weight: 700;
     color: var(--color-text);
     margin-bottom: 8px;
+    padding: 0 20px;
 }
 
 .project-card-desc {
@@ -718,6 +719,7 @@ html, body {
     color: var(--color-text-secondary);
     line-height: 1.5;
     margin-bottom: 16px;
+    padding: 0 20px;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -728,6 +730,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 0 20px;
 }
 
 .project-card-author {
