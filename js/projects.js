@@ -231,22 +231,30 @@ async function publishProject() {
 // BNCC Tag Input Component
 // ============================================
 
+// Controle de inicialização
+const _bnccInitialized = {};
+let _bnccSelectedIndex = -1;
+let _bnccActivePrefix = null;
+
 /**
  * Inicializa o input de tags BNCC para um modal
  * @param {string} prefix - 'project' ou 'edit'
  */
 function initBnccTagInput(prefix) {
-    const input = document.getElementById(`${prefix}BnccInput`);
-    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
-    let selectedIndex = -1;
+    if (_bnccInitialized[prefix]) {
+        renderBnccTags(prefix);
+        return;
+    }
+    _bnccInitialized[prefix] = true;
 
-    // Remove listeners antigos clonando o input
-    const newInput = input.cloneNode(true);
-    input.parentNode.replaceChild(newInput, input);
+    const input = document.getElementById(prefix + 'BnccInput');
+    const suggestions = document.getElementById(prefix + 'BnccSuggestions');
+    const container = document.getElementById(prefix + 'BnccContainer');
 
-    newInput.addEventListener('input', () => {
-        const query = newInput.value.trim();
-        selectedIndex = -1;
+    input.addEventListener('input', function() {
+        _bnccActivePrefix = prefix;
+        _bnccSelectedIndex = -1;
+        const query = this.value.trim();
         if (query.length < 2) {
             suggestions.classList.remove('active');
             suggestions.innerHTML = '';
@@ -255,28 +263,27 @@ function initBnccTagInput(prefix) {
         showBnccSuggestions(prefix, query);
     });
 
-    newInput.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', function(e) {
+        _bnccActivePrefix = prefix;
         const items = suggestions.querySelectorAll('.bncc-suggestion-item');
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
-            selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-            updateSuggestionSelection(items, selectedIndex);
+            _bnccSelectedIndex = Math.min(_bnccSelectedIndex + 1, items.length - 1);
+            updateSuggestionSelection(items, _bnccSelectedIndex);
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
-            selectedIndex = Math.max(selectedIndex - 1, 0);
-            updateSuggestionSelection(items, selectedIndex);
+            _bnccSelectedIndex = Math.max(_bnccSelectedIndex - 1, 0);
+            updateSuggestionSelection(items, _bnccSelectedIndex);
         } else if (e.key === 'Enter') {
             e.preventDefault();
-            if (selectedIndex >= 0 && items[selectedIndex]) {
-                const code = items[selectedIndex].dataset.code;
-                addBnccTag(prefix, code);
-            } else {
-                // Tenta adicionar o que foi digitado diretamente
-                tryAddBnccCode(prefix, newInput.value.trim());
+            if (_bnccSelectedIndex >= 0 && items[_bnccSelectedIndex]) {
+                addBnccTag(prefix, items[_bnccSelectedIndex].dataset.code);
+            } else if (this.value.trim()) {
+                tryAddBnccCode(prefix, this.value.trim());
             }
-        } else if (e.key === 'Backspace' && !newInput.value) {
-            // Remove última tag
+            _bnccSelectedIndex = -1;
+        } else if (e.key === 'Backspace' && !this.value) {
             if (bnccTagState[prefix].length > 0) {
                 bnccTagState[prefix].pop();
                 renderBnccTags(prefix);
@@ -284,56 +291,66 @@ function initBnccTagInput(prefix) {
         }
     });
 
-    // Fecha sugestões ao clicar fora
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest(`#${prefix}BnccWrapper`)) {
-            suggestions.classList.remove('active');
+    // Delegação de evento para cliques nas sugestões
+    suggestions.addEventListener('mousedown', function(e) {
+        // mousedown em vez de click para disparar antes do blur
+        const item = e.target.closest('.bncc-suggestion-item');
+        if (item) {
+            e.preventDefault();
+            addBnccTag(prefix, item.dataset.code);
         }
     });
 
-    // Clica no container foca no input
-    document.getElementById(`${prefix}BnccContainer`).addEventListener('click', () => {
-        document.getElementById(`${prefix}BnccInput`).focus();
+    container.addEventListener('click', function() {
+        input.focus();
     });
 }
 
+// Fecha sugestões ao clicar fora (uma vez só)
+document.addEventListener('click', function(e) {
+    ['project', 'edit'].forEach(function(prefix) {
+        const wrapper = document.getElementById(prefix + 'BnccWrapper');
+        const suggestions = document.getElementById(prefix + 'BnccSuggestions');
+        if (wrapper && suggestions && !wrapper.contains(e.target)) {
+            suggestions.classList.remove('active');
+        }
+    });
+});
+
 function showBnccSuggestions(prefix, query) {
-    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
-    const results = searchBnccCodes(query).filter(r => !bnccTagState[prefix].includes(r.code));
+    const suggestions = document.getElementById(prefix + 'BnccSuggestions');
+    const results = searchBnccCodes(query).filter(function(r) {
+        return !bnccTagState[prefix].includes(r.code);
+    });
 
     if (results.length === 0) {
-        // Se parece um código BNCC mas não existe, mostra erro
-        const looksLikeCode = /^[A-Za-z]{2}\d{2}CO\d{2}$/i.test(query);
+        var looksLikeCode = /^[A-Za-z]{2}\d{2}CO\d{2}$/i.test(query);
         if (looksLikeCode) {
-            suggestions.innerHTML = `<div class="bncc-error-msg">Código "${query.toUpperCase()}" não encontrado na BNCC de Computação.</div>`;
+            suggestions.innerHTML = '<div class="bncc-error-msg">Código "' + query.toUpperCase() + '" não encontrado na BNCC de Computação.</div>';
         } else {
-            suggestions.innerHTML = `<div class="bncc-error-msg">Nenhum resultado para "${query}".</div>`;
+            suggestions.innerHTML = '<div class="bncc-error-msg">Nenhum resultado para "' + query + '".</div>';
         }
         suggestions.classList.add('active');
         return;
     }
 
-    suggestions.innerHTML = results.slice(0, 8).map(r => `
-        <div class="bncc-suggestion-item" data-code="${r.code}">
-            <span class="suggestion-code">${r.code}</span>
-            <span class="suggestion-desc">${r.description}</span>
-            <span class="suggestion-level">${r.level}</span>
-        </div>
-    `).join('');
-
-    suggestions.querySelectorAll('.bncc-suggestion-item').forEach(item => {
-        item.addEventListener('click', () => {
-            addBnccTag(prefix, item.dataset.code);
-        });
-    });
-
+    var html = '';
+    var shown = results.slice(0, 8);
+    for (var i = 0; i < shown.length; i++) {
+        html += '<div class="bncc-suggestion-item" data-code="' + shown[i].code + '">'
+            + '<span class="suggestion-code">' + shown[i].code + '</span>'
+            + '<span class="suggestion-desc">' + shown[i].description + '</span>'
+            + '<span class="suggestion-level">' + shown[i].level + '</span>'
+            + '</div>';
+    }
+    suggestions.innerHTML = html;
     suggestions.classList.add('active');
 }
 
 function updateSuggestionSelection(items, index) {
-    items.forEach((item, i) => {
-        item.classList.toggle('selected', i === index);
-    });
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle('selected', i === index);
+    }
     if (items[index]) {
         items[index].scrollIntoView({ block: 'nearest' });
     }
@@ -341,11 +358,11 @@ function updateSuggestionSelection(items, index) {
 
 function tryAddBnccCode(prefix, value) {
     if (!value) return;
-    const code = value.toUpperCase();
+    var code = value.toUpperCase();
     if (isValidBnccCode(code)) {
         addBnccTag(prefix, code);
     } else {
-        alert(`Código BNCC "${code}" não existe. Digite um código válido ou busque por palavra-chave.`);
+        alert('Código BNCC "' + code + '" não existe.\nDigite um código válido ou busque por palavra-chave.');
     }
 }
 
@@ -355,32 +372,37 @@ function addBnccTag(prefix, code) {
     bnccTagState[prefix].push(code);
     renderBnccTags(prefix);
 
-    const input = document.getElementById(`${prefix}BnccInput`);
-    const suggestions = document.getElementById(`${prefix}BnccSuggestions`);
+    var input = document.getElementById(prefix + 'BnccInput');
+    var suggestions = document.getElementById(prefix + 'BnccSuggestions');
     input.value = '';
     suggestions.classList.remove('active');
     suggestions.innerHTML = '';
+    _bnccSelectedIndex = -1;
     input.focus();
 }
 
 function removeBnccTag(prefix, code) {
-    bnccTagState[prefix] = bnccTagState[prefix].filter(c => c !== code);
+    bnccTagState[prefix] = bnccTagState[prefix].filter(function(c) { return c !== code; });
     renderBnccTags(prefix);
 }
 
 function renderBnccTags(prefix) {
-    const container = document.getElementById(`${prefix}BnccContainer`);
-    const input = container.querySelector('.bncc-tag-field');
+    var container = document.getElementById(prefix + 'BnccContainer');
+    var input = document.getElementById(prefix + 'BnccInput');
 
     // Remove tags existentes (mantém o input)
-    container.querySelectorAll('.bncc-tag').forEach(el => el.remove());
+    var existing = container.querySelectorAll('.bncc-tag');
+    for (var i = 0; i < existing.length; i++) {
+        existing[i].remove();
+    }
 
     // Adiciona tags antes do input
-    bnccTagState[prefix].forEach(code => {
-        const tag = document.createElement('span');
+    for (var j = 0; j < bnccTagState[prefix].length; j++) {
+        var code = bnccTagState[prefix][j];
+        var tag = document.createElement('span');
         tag.className = 'bncc-tag';
-        tag.innerHTML = `${code} <span class="material-icons tag-remove" onclick="removeBnccTag('${prefix}', '${code}')">close</span>`;
-        tag.title = getBnccDescription(code);
+        tag.title = getBnccDescription(code) || code;
+        tag.innerHTML = code + ' <span class="material-icons tag-remove" onclick="removeBnccTag(\'' + prefix + '\', \'' + code + '\')">close</span>';
         container.insertBefore(tag, input);
-    });
+    }
 }

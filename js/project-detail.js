@@ -101,6 +101,20 @@ function renderProjectDetail(project) {
                 </div>
             </div>
 
+            <!-- Tags BNCC -->
+            ${(project.bnccCodes && project.bnccCodes.length > 0) ? `
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">school</span> Habilidades BNCC
+                </h2>
+                <div class="detail-bncc-tags">
+                    ${project.bnccCodes.map(code =>
+                        `<span class="bncc-tag" title="${escapeHtml(getBnccDescription(code) || '')}">${escapeHtml(code)} — ${escapeHtml(getBnccDescription(code) || '')}</span>`
+                    ).join('')}
+                </div>
+            </div>
+            ` : ''}
+
             <!-- Descrição -->
             <div class="detail-section">
                 <h2 class="detail-section-title">
@@ -458,6 +472,12 @@ function openEditProjectModal() {
     document.getElementById('editProjectVideo').value = currentProject.videoURL;
     document.getElementById('editPdfLinks').value = (currentProject.pdfLinks || []).join('\n');
     document.getElementById('editExtraLinks').value = (currentProject.extraLinks || []).join('\n');
+
+    // Carrega tags BNCC existentes
+    bnccTagState.edit = (currentProject.bnccCodes || []).slice();
+    initBnccTagInput('edit');
+    renderBnccTags('edit');
+
     document.getElementById('editProjectModal').classList.add('active');
 }
 
@@ -514,6 +534,7 @@ async function saveProjectEdit() {
             videoURL: videoURL,
             pdfLinks: pdfLinksText.split('\n').map(l => l.trim()).filter(l => l),
             extraLinks: extraLinksText ? extraLinksText.split('\n').map(l => l.trim()).filter(l => l) : [],
+            bnccCodes: bnccTagState.edit.slice(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 

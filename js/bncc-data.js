@@ -155,7 +155,21 @@ const BNCC_CODES = {
     "EM13CO09": "Tecnologias digitais no mundo do trabalho",
     "EM13CO10": "Fundamentos de Inteligência Artificial",
     "EM13CO11": "Modelos computacionais e simulações",
-    "EM13CO12": "Ciência de dados: produzir e analisar informações"
+    "EM13CO12": "Ciência de dados: produzir e analisar informações",
+    "EM13CO13": "Representação e consulta a dados digitais para pesquisas",
+    "EM13CO14": "Avaliar confiabilidade de informações digitais",
+    "EM13CO15": "Analisar experiência do usuário (UX) em artefatos computacionais",
+    "EM13CO16": "Desenvolver projetos com robótica (física ou simulada)",
+    "EM13CO17": "Construir redes virtuais de interação e colaboração",
+    "EM13CO18": "Planejar e gerenciar projetos colaborativos com ferramentas digitais",
+    "EM13CO19": "Expor e negociar propostas usando mídias digitais",
+    "EM13CO20": "Criar e publicar conteúdo digital avaliando consequências",
+    "EM13CO21": "Comunicar ideias complexas com objetos digitais (infográficos, mapas)",
+    "EM13CO22": "Produzir e publicar conteúdo multimídia com diferentes mídias",
+    "EM13CO23": "Analisar criticamente experiências em comunidades virtuais",
+    "EM13CO24": "Reconhecer impactos da tecnologia na saúde física e mental",
+    "EM13CO25": "Dialogar em ambientes virtuais com segurança e respeito",
+    "EM13CO26": "Aplicar conceitos de direito digital e LGPD"
 };
 
 // Mapa de nível por prefixo do código

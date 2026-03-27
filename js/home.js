@@ -65,9 +65,17 @@ function createProjectCard(id, project) {
         ? `<div class="project-image-wrapper"><img src="${directImageUrl}" class="project-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'"><div class="project-image-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1"><span class="material-icons">image</span></div></div>`
         : `<div class="project-image-placeholder"><span class="material-icons">image</span></div>`;
 
+    // Tags BNCC
+    const bnccHtml = (project.bnccCodes && project.bnccCodes.length > 0)
+        ? `<div class="project-card-tags">${project.bnccCodes.slice(0, 4).map(code =>
+            `<span class="bncc-tag" title="${escapeHtml(getBnccDescription(code) || code)}">${escapeHtml(code)}</span>`
+          ).join('')}${project.bnccCodes.length > 4 ? `<span class="bncc-tag">+${project.bnccCodes.length - 4}</span>` : ''}</div>`
+        : '';
+
     card.innerHTML = `
         ${imageHtml}
         <h3 class="project-card-title">${escapeHtml(project.title)}</h3>
+        ${bnccHtml}
         <p class="project-card-desc">${escapeHtml(project.description)}</p>
         <div class="project-card-footer">
             <div class="project-card-author">
