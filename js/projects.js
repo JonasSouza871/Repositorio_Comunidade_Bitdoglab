@@ -403,7 +403,85 @@ function renderBnccTags(prefix) {
         var tag = document.createElement('span');
         tag.className = 'bncc-tag';
         tag.setAttribute('data-bncc', code);
-        tag.innerHTML = code + ' <span class="material-icons tag-remove" onclick="removeBnccTag(\'' + prefix + '\', \'' + code + '\')">close</span>';
+        tag.innerHTML = code + ' <span class="material-icons tag-remove" data-remove="' + prefix + '|' + code + '">close</span>';
         container.insertBefore(tag, input);
     }
 }
+
+// ==========================================
+// Event Listeners (substitui onclick inline)
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal de Novo Projeto
+    const addProjectBtn = document.getElementById('addProjectBtn');
+    const projectModalClose = document.querySelector('#projectModal .modal-close');
+    const publishBtn = document.getElementById('publishBtn');
+    
+    if (addProjectBtn) {
+        addProjectBtn.addEventListener('click', openProjectModal);
+    }
+    
+    if (projectModalClose) {
+        projectModalClose.addEventListener('click', closeProjectModal);
+    }
+    
+    if (publishBtn) {
+        publishBtn.addEventListener('click', publishProject);
+    }
+    
+    // Modal de Edição de Projeto
+    const editProjectModalClose = document.querySelector('#editProjectModal .modal-close');
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    
+    if (editProjectModalClose) {
+        editProjectModalClose.addEventListener('click', closeEditProjectModal);
+    }
+    
+    if (saveEditBtn) {
+        saveEditBtn.addEventListener('click', saveProjectEdit);
+    }
+    
+    // Modal de Preview de Código
+    const codePreviewModalClose = document.querySelector('#codePreviewModal .modal-close');
+    
+    if (codePreviewModalClose) {
+        codePreviewModalClose.addEventListener('click', closeCodePreview);
+    }
+    
+    // Delegação de evento para remover tags BNCC
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('tag-remove') || e.target.parentElement.classList.contains('tag-remove')) {
+            var span = e.target.classList.contains('tag-remove') ? e.target : e.target.parentElement;
+            var data = span.getAttribute('data-remove');
+            if (data) {
+                var parts = data.split('|');
+                removeBnccTag(parts[0], parts[1]);
+            }
+        }
+    });
+    
+    // Barra de busca
+    const searchClear = document.querySelector('.search-clear');
+    const searchInput = document.getElementById('searchInput');
+    
+    if (searchClear && searchInput) {
+        searchClear.addEventListener('click', function() {
+            searchInput.value = '';
+            searchClear.style.display = 'none';
+            if (typeof clearSearch === 'function') {
+                clearSearch();
+            }
+        });
+        
+        searchInput.addEventListener('input', function() {
+            if (this.value) {
+                searchClear.style.display = 'flex';
+            } else {
+                searchClear.style.display = 'none';
+            }
+            if (typeof window.handleSearchInput === 'function') {
+                window.handleSearchInput(this.value);
+            }
+        });
+    }
+});

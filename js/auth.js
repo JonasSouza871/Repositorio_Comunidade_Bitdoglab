@@ -4,14 +4,33 @@
  */
 
 const googleProvider = new firebase.auth.GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 
-// Login com Google
+// Login com Google usando POPUP (mais confiável que redirect)
 async function loginWithGoogle() {
     try {
+        console.log('Iniciando login com popup...');
         const result = await auth.signInWithPopup(googleProvider);
+        console.log('Login bem-sucedido:', result.user.email);
         return result.user;
     } catch (error) {
-        console.error('Erro no login:', error);
+        console.error('Erro no login:', error.code, error.message);
+        
+        // Códigos de erro comuns
+        if (error.code === 'auth/popup-blocked') {
+            alert('Popup bloqueado! Permita popups para este site e tente novamente.');
+        } else if (error.code === 'auth/popup-closed-by-user') {
+            // Usuário fechou o popup, não faz nada
+            console.log('Login cancelado pelo usuário');
+        } else if (error.code === 'auth/unauthorized-domain') {
+            alert('Domínio não autorizado. Contate o administrador.');
+        } else if (error.code === 'auth/requests-from-referer-http://127.0.0.1:5500-are-blocked' || 
+                   error.code === 'auth/requests-from-referer-http://localhost:5500-are-blocked') {
+            alert('API Key bloqueada para este domínio. Configure no Google Cloud Console.');
+        } else {
+            alert('Erro ao fazer login: ' + error.message);
+        }
         throw error;
     }
 }
@@ -20,6 +39,7 @@ async function loginWithGoogle() {
 async function logout() {
     try {
         await auth.signOut();
+        console.log('Logout realizado');
     } catch (error) {
         console.error('Erro no logout:', error);
     }
@@ -27,12 +47,12 @@ async function logout() {
 
 // Listener de estado de autenticação
 auth.onAuthStateChanged(async (user) => {
+    console.log('Auth state changed:', user ? user.email : 'null');
+    
     const loginBtn = document.getElementById('loginBtn');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
     const userAvatar = document.getElementById('userAvatar');
-    const logoutBtn = document.getElementById('logoutBtn');
-
     const addProjectBtn = document.getElementById('addProjectBtn');
 
     if (user) {
@@ -44,10 +64,13 @@ auth.onAuthStateChanged(async (user) => {
         if (addProjectBtn) addProjectBtn.style.display = 'flex';
 
         // Verifica se é primeiro login
-        const isFirstLogin = await checkFirstLogin(user.uid);
-        if (isFirstLogin) {
-            openProfileModal(user);
-        }
+        checkFirstLogin(user.uid).then((isFirstLogin) => {
+            if (isFirstLogin) {
+                openProfileModal(user);
+            }
+        }).catch((err) => {
+            console.error('Erro checkFirstLogin:', err);
+        });
     } else {
         // Usuário deslogado
         loginBtn.style.display = 'flex';
@@ -58,6 +81,29 @@ auth.onAuthStateChanged(async (user) => {
     // Recarrega contribuidores pra atualizar botão de editar bio
     if (typeof loadContributors === 'function') {
         loadContributors();
+    }
+});
+
+// ==========================================
+// Event Listeners (substitui onclick inline)
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Login/Logout
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (loginBtn) {
+        loginBtn.addEventListener('click', loginWithGoogle);
+    }
+    
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
+
+    // Salvar perfil
+    const saveProfileBtn = document.querySelector('#profileModal .btn-save');
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', saveProfile);
     }
 });
 

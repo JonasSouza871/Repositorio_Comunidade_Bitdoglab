@@ -32,7 +32,7 @@
 
             <div class="header-controls">
                 <!-- Login Google -->
-                <button id="loginBtn" class="btn btn-login" onclick="loginWithGoogle()">
+                <button id="loginBtn" class="btn btn-login">
                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="google-icon">
                     Entrar com Google
                 </button>
@@ -41,7 +41,7 @@
                 <div id="userInfo" class="user-info" style="display: none;">
                     <img id="userAvatar" class="user-avatar" alt="Avatar">
                     <span id="userName" class="user-name"></span>
-                    <button id="logoutBtn" class="btn btn-small" onclick="logout()">Sair</button>
+                    <button id="logoutBtn" class="btn btn-small">Sair</button>
                 </div>
 
                 <!-- Controles serial (visíveis apenas na aba terminal) -->
@@ -62,7 +62,7 @@
                 <div class="home-container">
                     <div class="home-header">
                         <h2 class="home-title">Projetos da Comunidade</h2>
-                        <button id="addProjectBtn" class="btn btn-add" style="display: none;" onclick="openProjectModal()">
+                        <button id="addProjectBtn" class="btn btn-add" style="display: none;">
                             <span class="material-icons">add</span> Novo Projeto
                         </button>
                     </div>
@@ -72,7 +72,7 @@
                         <div class="search-box">
                             <span class="material-icons search-icon">search</span>
                             <input type="text" id="searchInput" class="search-input" placeholder="Buscar por título ou código BNCC (ex: EF03MA01)...">
-                            <button class="search-clear" onclick="clearSearch()" style="display: none;">
+                            <button class="search-clear" style="display: none;">
                                 <span class="material-icons">close</span>
                             </button>
                         </div>
@@ -144,7 +144,7 @@
         <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title">Editar Projeto</h2>
-                <button class="modal-close" onclick="closeEditProjectModal()">
+                <button class="modal-close">
                     <span class="material-icons">close</span>
                 </button>
             </div>
@@ -186,7 +186,7 @@
                     <div class="bncc-suggestions" id="editBnccSuggestions"></div>
                 </div>
 
-                <button id="saveEditBtn" class="btn btn-save" onclick="saveProjectEdit()">
+                <button id="saveEditBtn" class="btn btn-save">
                     <span class="material-icons">save</span> Salvar Alterações
                 </button>
             </div>
@@ -198,7 +198,7 @@
         <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title" id="codePreviewTitle">main.py</h2>
-                <button class="modal-close" onclick="closeCodePreview()">
+                <button class="modal-close">
                     <span class="material-icons">close</span>
                 </button>
             </div>
@@ -211,7 +211,7 @@
         <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title">Novo Projeto</h2>
-                <button class="modal-close" onclick="closeProjectModal()">
+                <button class="modal-close">
                     <span class="material-icons">close</span>
                 </button>
             </div>
@@ -262,7 +262,7 @@
                     <span id="progressText" class="progress-text">Enviando...</span>
                 </div>
 
-                <button id="publishBtn" class="btn btn-save" onclick="publishProject()">
+                <button id="publishBtn" class="btn btn-save">
                     <span class="material-icons">publish</span> Publicar Projeto
                 </button>
             </div>
@@ -281,7 +281,7 @@
                 <label class="form-label" for="profileBio">Bio</label>
                 <textarea id="profileBio" class="form-textarea" placeholder="Conte um pouco sobre você..." maxlength="200" rows="3"></textarea>
 
-                <button class="btn btn-save" onclick="saveProfile()">Salvar Perfil</button>
+                <button class="btn btn-save">Salvar Perfil</button>
             </div>
         </div>
     </div>
