@@ -3,26 +3,6 @@
  * Comunidade BitDogLab
  */
 
-// Converte link do Google Drive em thumbnail
-function getDirectImageUrl(url) {
-    if (!url) return '';
-    
-    // Google Drive - extrai file ID e converte para thumbnail
-    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (driveMatch) {
-        // Usa o thumbnail do Google Drive (funciona melhor que uc?export=view)
-        return `https://lh3.googleusercontent.com/d/${driveMatch[1]}=s800`;
-    }
-    
-    // Dropbox - converte para link direto
-    if (url.includes('dropbox.com')) {
-        return url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
-    }
-    
-    // Imgur já é direto
-    return url;
-}
-
 // Projeto atual carregado
 let currentProject = null;
 let currentProjectId = null;
@@ -38,7 +18,7 @@ async function openProjectDetail(projectId) {
 
         currentProjectId = projectId;
         currentProject = doc.data();
-        renderProjectDetail(currentProject);
+        await renderProjectDetail(currentProject);
 
         // Mostra seção de detalhes, esconde todas as outras
         document.querySelectorAll('.main > section').forEach(s => s.classList.remove('active'));
@@ -68,24 +48,28 @@ function backToHome() {
 }
 
 // Renderiza página de detalhes
-function renderProjectDetail(project) {
+async function renderProjectDetail(project) {
     const container = document.getElementById('projectDetailContent');
 
-    const videoEmbed = getVideoEmbed(project.videoURL);
     const date = project.createdAt ? project.createdAt.toDate().toLocaleDateString('pt-BR') : '';
+    const canManage = await canManageProject(project);
+    const coverImageUrl = getDirectImageUrl(project.imageURL);
+    const authorPhoto = sanitizeHttpUrl(project.authorPhoto || '');
+    const githubURL = sanitizeGithubRepoUrl(project.githubURL || '');
+    const videoEmbed = getVideoEmbed(project.videoURL || '');
 
     container.innerHTML = `
         <!-- Header do projeto -->
         <div class="detail-header">
-            <button class="btn btn-back" onclick="backToHome()">
+            <button type="button" class="btn btn-back" data-project-action="back-home">
                 <span class="material-icons">arrow_back</span> Voltar
             </button>
-            ${isProjectOwner(project) ? `
+            ${canManage ? `
             <div class="owner-actions">
-                <button class="btn btn-edit" onclick="openEditProjectModal()">
+                <button type="button" class="btn btn-edit" data-project-action="edit-project">
                     <span class="material-icons">edit</span> Editar
                 </button>
-                <button class="btn btn-delete" onclick="deleteCurrentProject()">
+                <button type="button" class="btn btn-delete" data-project-action="delete-project">
                     <span class="material-icons">delete</span> Excluir
                 </button>
             </div>
@@ -94,12 +78,12 @@ function renderProjectDetail(project) {
 
         <div class="detail-body">
             <!-- Imagem de capa -->
-            ${project.imageURL ? `<img src="${getDirectImageUrl(project.imageURL)}" class="detail-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'">` : ''}
+            ${coverImageUrl ? `<img src="${escapeHtml(coverImageUrl)}" class="detail-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'">` : ''}
             
             <!-- Info principal -->
             <h1 class="detail-title">${escapeHtml(project.title)}</h1>
             <div class="detail-author">
-                <img src="${project.authorPhoto || ''}" alt="" class="detail-author-avatar" onerror="this.style.display='none'">
+                <img src="${escapeHtml(authorPhoto)}" alt="" class="detail-author-avatar" onerror="this.style.display='none'">
                 <div>
                     <span class="detail-author-name">${escapeHtml(project.authorName)}</span>
                     <span class="detail-date">Publicado em ${date}</span>
@@ -128,7 +112,18 @@ function renderProjectDetail(project) {
                 <p class="detail-description">${escapeHtml(project.description).replace(/\n/g, '<br>')}</p>
             </div>
 
+            ${project.materials ? `
+            <!-- Materiais utilizados -->
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">inventory_2</span> Materiais Utilizados
+                </h2>
+                ${renderProjectMaterials(project.materials)}
+            </div>
+            ` : ''}
+
             <!-- Vídeo -->
+            ${videoEmbed ? `
             <div class="detail-section">
                 <h2 class="detail-section-title">
                     <span class="material-icons">play_circle</span> Vídeo
@@ -137,28 +132,29 @@ function renderProjectDetail(project) {
                     ${videoEmbed}
                 </div>
             </div>
+            ` : ''}
 
-            <!-- Guias de Uso (PDFs) -->
+            <!-- GitHub -->
+            ${githubURL ? `
             <div class="detail-section">
                 <h2 class="detail-section-title">
-                    <span class="material-icons">menu_book</span> Guias de Como Usar
+                    <span class="material-icons">code</span> Repositório
                 </h2>
-                <div class="detail-guides">
-                    ${renderPdfGuides(project.pdfLinks || [])}
-                </div>
-            </div>
-
-            <!-- Links extras -->
-            ${(project.extraLinks && project.extraLinks.length > 0) ? `
-            <div class="detail-section">
-                <h2 class="detail-section-title">
-                    <span class="material-icons">link</span> Materiais Extras
-                </h2>
-                <div class="detail-extras">
-                    ${renderExtraLinks(project.extraLinks)}
-                </div>
+                <a href="${escapeHtml(githubURL)}" target="_blank" rel="noopener" class="extra-link">
+                    <span class="material-icons">open_in_new</span>
+                    Abrir no GitHub
+                </a>
             </div>
             ` : ''}
+            <!-- Plano de aula e estudo dirigido -->
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">menu_book</span> Plano de Aula e Estudo Dirigido
+                </h2>
+                <div class="detail-guides">
+                    ${renderLessonPdf(project)}
+                </div>
+            </div>
 
             <!-- Arquivos do Projeto -->
             <div class="detail-section">
@@ -172,13 +168,67 @@ function renderProjectDetail(project) {
 
             <!-- Enviar para a Placa -->
             <div class="detail-section detail-flash">
-                <button class="btn btn-flash" onclick="flashCurrentProject()">
+                <button type="button" class="btn btn-flash" data-project-action="flash-project">
                     <span class="material-icons">bolt</span> Enviar para a Placa
                 </button>
                 <p class="flash-hint">Envia o código direto para a BitDogLab via WebSerial</p>
             </div>
         </div>
     `;
+
+    renderPdfViewers(container);
+}
+
+function renderProjectMaterials(materials) {
+    const lines = (materials || '')
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+        return '<p class="detail-description">Nenhum material informado.</p>';
+    }
+
+    return `
+        <ul class="materials-list">
+            ${lines.map(line => {
+                const match = line.match(/^(\d+(?:[,.]\d+)?\s*x)\s+(.+)$/i);
+                if (!match) {
+                    return `<li>${escapeHtml(line)}</li>`;
+                }
+
+                return `
+                    <li>
+                        <span class="material-quantity">${escapeHtml(match[1].replace(/\s+/g, ''))}</span>
+                        <span class="material-name">${escapeHtml(match[2])}</span>
+                    </li>
+                `;
+            }).join('')}
+        </ul>
+    `;
+}
+
+function handleProjectDetailAction(event) {
+    const trigger = event.target.closest('[data-project-action]');
+    if (!trigger) return;
+
+    event.preventDefault();
+
+    const action = trigger.dataset.projectAction;
+
+    if (action === 'back-home') {
+        backToHome();
+    } else if (action === 'edit-project') {
+        openEditProjectModal();
+    } else if (action === 'delete-project') {
+        deleteCurrentProject();
+    } else if (action === 'flash-project') {
+        flashCurrentProject();
+    } else if (action === 'preview-code') {
+        previewCode(trigger.dataset.fileIndex);
+    } else if (action === 'download-code') {
+        downloadPyFile(trigger.dataset.fileIndex);
+    }
 }
 
 // Renderiza arquivos do projeto para download
@@ -197,10 +247,10 @@ function renderProjectFiles(project) {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="btn btn-small btn-preview" onclick="previewCode('${escapeHtml(project.mainFile.name || 'main.py')}', 0)">
+                    <button type="button" class="btn btn-small btn-preview" data-project-action="preview-code" data-file-index="0">
                         <span class="material-icons">visibility</span> Ver
                     </button>
-                    <button class="btn btn-small btn-download" onclick="downloadPyFile('${escapeHtml(project.mainFile.name || 'main.py')}', 0)">
+                    <button type="button" class="btn btn-small btn-download" data-project-action="download-code" data-file-index="0">
                         <span class="material-icons">download</span> Baixar
                     </button>
                 </div>
@@ -221,10 +271,10 @@ function renderProjectFiles(project) {
                         </div>
                     </div>
                     <div class="file-actions">
-                        <button class="btn btn-small btn-preview" onclick="previewCode('${escapeHtml(lib.name)}', ${index + 1})">
+                        <button type="button" class="btn btn-small btn-preview" data-project-action="preview-code" data-file-index="${index + 1}">
                             <span class="material-icons">visibility</span> Ver
                         </button>
-                        <button class="btn btn-small btn-download" onclick="downloadPyFile('${escapeHtml(lib.name)}', ${index + 1})">
+                        <button type="button" class="btn btn-small btn-download" data-project-action="download-code" data-file-index="${index + 1}">
                             <span class="material-icons">download</span> Baixar
                         </button>
                     </div>
@@ -236,64 +286,194 @@ function renderProjectFiles(project) {
     return html || '<p class="empty-message">Nenhum arquivo disponível.</p>';
 }
 
-// Renderiza guias de PDF
-function renderPdfGuides(pdfLinks) {
-    if (!pdfLinks.length) return '<p class="empty-message">Nenhum guia disponível.</p>';
+// Renderiza PDF pedagógico
+function renderLessonPdf(project) {
+    const legacyLink = project.pdfLinks && project.pdfLinks[0];
+    const pdfUrl = sanitizeHttpUrl(project.lessonPdfURL || legacyLink);
 
-    let html = '';
-    pdfLinks.forEach((link, index) => {
-        const embedUrl = getDriveEmbedUrl(link);
-        const downloadUrl = getDriveDownloadUrl(link);
+    if (!pdfUrl) return '<p class="empty-message">Nenhum plano de aula disponível.</p>';
 
-        html += `
-            <div class="guide-item">
-                <div class="guide-header">
-                    <span class="material-icons">picture_as_pdf</span>
-                    <span class="guide-title">Documento ${index + 1}</span>
-                    <div class="guide-actions">
-                        <a href="${link}" target="_blank" class="btn btn-small btn-preview">
-                            <span class="material-icons">open_in_new</span> Abrir no Drive
-                        </a>
-                        ${downloadUrl ? `
-                        <a href="${downloadUrl}" target="_blank" class="btn btn-small btn-download">
-                            <span class="material-icons">download</span> Baixar
-                        </a>
-                        ` : ''}
-                    </div>
+    const title = project.lessonPdfMeta?.name || 'Plano de aula e estudo dirigido';
+    const downloadUrl = sanitizeHttpUrl(project.lessonPdfURL ? project.lessonPdfURL : getDriveDownloadUrl(legacyLink));
+
+    return `
+        <div class="guide-item">
+            <div class="guide-header">
+                <span class="material-icons">picture_as_pdf</span>
+                <span class="guide-title">${escapeHtml(title)}</span>
+                <div class="guide-actions">
+                    <a href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener" class="btn btn-small btn-preview">
+                        <span class="material-icons">open_in_new</span> Abrir
+                    </a>
+                    ${downloadUrl ? `
+                    <a href="${escapeHtml(downloadUrl)}" target="_blank" rel="noopener" class="btn btn-small btn-download">
+                        <span class="material-icons">download</span> Baixar
+                    </a>
+                    ` : ''}
                 </div>
-                ${embedUrl ? `
-                <div class="guide-preview">
-                    <iframe src="${embedUrl}" class="pdf-viewer" allowfullscreen></iframe>
-                </div>
-                ` : ''}
             </div>
-        `;
-    });
-
-    return html;
+            <div class="guide-preview">
+                <div class="pdf-renderer" data-pdf-url="${encodeURIComponent(pdfUrl)}">
+                    <div class="pdf-toolbar">
+                        <button type="button" class="pdf-tool-btn" data-pdf-action="prev" aria-label="Pagina anterior">
+                            <span class="material-icons">chevron_left</span>
+                        </button>
+                        <span class="pdf-page-status">Carregando PDF...</span>
+                        <button type="button" class="pdf-tool-btn" data-pdf-action="next" aria-label="Proxima pagina">
+                            <span class="material-icons">chevron_right</span>
+                        </button>
+                        <span class="pdf-toolbar-spacer"></span>
+                        <button type="button" class="pdf-tool-btn" data-pdf-action="zoom-out" aria-label="Diminuir zoom">
+                            <span class="material-icons">zoom_out</span>
+                        </button>
+                        <button type="button" class="pdf-tool-btn" data-pdf-action="zoom-in" aria-label="Aumentar zoom">
+                            <span class="material-icons">zoom_in</span>
+                        </button>
+                    </div>
+                    <div class="pdf-canvas-wrap">
+                        <canvas class="pdf-canvas"></canvas>
+                    </div>
+                    <p class="pdf-error" hidden>Nao foi possivel mostrar o preview. Use Abrir ou Baixar.</p>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-// Renderiza links extras
-function renderExtraLinks(links) {
-    let html = '';
-    links.forEach((link, index) => {
-        html += `
-            <a href="${link}" target="_blank" class="extra-link">
-                <span class="material-icons">open_in_new</span>
-                Material extra ${index + 1}
-            </a>
-        `;
-    });
-    return html;
+function renderPdfViewers(scope) {
+    const viewers = scope.querySelectorAll('.pdf-renderer[data-pdf-url]');
+    viewers.forEach(initPdfViewer);
 }
 
-// Extrai embed URL do Google Drive
-function getDriveEmbedUrl(url) {
-    const fileId = extractDriveFileId(url);
-    if (fileId) {
-        return `https://drive.google.com/file/d/${fileId}/preview`;
+function initPdfViewer(viewer) {
+    if (!window.pdfjsLib) {
+        showPdfViewerError(viewer);
+        return;
     }
-    return null;
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+    const state = {
+        pdf: null,
+        page: 1,
+        zoom: 1,
+        rendering: false,
+        pending: false
+    };
+
+    const url = decodeURIComponent(viewer.dataset.pdfUrl || '');
+    const canvas = viewer.querySelector('.pdf-canvas');
+    const wrap = viewer.querySelector('.pdf-canvas-wrap');
+    const status = viewer.querySelector('.pdf-page-status');
+    const buttons = viewer.querySelectorAll('[data-pdf-action]');
+
+    function setButtons() {
+        const prev = viewer.querySelector('[data-pdf-action="prev"]');
+        const next = viewer.querySelector('[data-pdf-action="next"]');
+        const zoomOut = viewer.querySelector('[data-pdf-action="zoom-out"]');
+        const zoomIn = viewer.querySelector('[data-pdf-action="zoom-in"]');
+
+        if (prev) prev.disabled = !state.pdf || state.page <= 1;
+        if (next) next.disabled = !state.pdf || state.page >= state.pdf.numPages;
+        if (zoomOut) zoomOut.disabled = state.zoom <= 0.75;
+        if (zoomIn) zoomIn.disabled = state.zoom >= 1.75;
+    }
+
+    async function renderPage() {
+        if (!state.pdf) return;
+
+        if (state.rendering) {
+            state.pending = true;
+            return;
+        }
+
+        state.rendering = true;
+        status.textContent = `Pagina ${state.page} de ${state.pdf.numPages}`;
+        setButtons();
+
+        try {
+            const page = await state.pdf.getPage(state.page);
+            const baseViewport = page.getViewport({ scale: 1 });
+            const availableWidth = Math.max(280, wrap.clientWidth - 24);
+            const fittedScale = availableWidth / baseViewport.width;
+            const viewport = page.getViewport({ scale: fittedScale * state.zoom });
+            const context = canvas.getContext('2d');
+            const ratio = window.devicePixelRatio || 1;
+
+            canvas.width = Math.floor(viewport.width * ratio);
+            canvas.height = Math.floor(viewport.height * ratio);
+            canvas.style.width = `${Math.floor(viewport.width)}px`;
+            canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            await page.render({ canvasContext: context, viewport }).promise;
+        } catch (error) {
+            console.error('Erro ao renderizar PDF:', error);
+            showPdfViewerError(viewer);
+        } finally {
+            state.rendering = false;
+            if (state.pending) {
+                state.pending = false;
+                renderPage();
+            }
+        }
+    }
+
+    buttons.forEach(button => {
+        button.addEventListener('click', () => {
+            const action = button.dataset.pdfAction;
+            if (action === 'prev' && state.page > 1) state.page -= 1;
+            if (action === 'next' && state.pdf && state.page < state.pdf.numPages) state.page += 1;
+            if (action === 'zoom-out') state.zoom = Math.max(0.75, state.zoom - 0.25);
+            if (action === 'zoom-in') state.zoom = Math.min(1.75, state.zoom + 0.25);
+            renderPage();
+        });
+    });
+
+    setButtons();
+
+    loadPdfDocument(url, status)
+        .then(pdf => {
+            state.pdf = pdf;
+            renderPage();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar PDF:', error);
+            showPdfViewerError(viewer);
+        });
+}
+
+async function loadPdfDocument(url, status) {
+    if (status) status.textContent = 'Baixando PDF...';
+
+    const response = await fetch(url, {
+        method: 'GET',
+        mode: 'cors',
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error(`Falha ao baixar PDF: ${response.status}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    if (status) status.textContent = 'Renderizando PDF...';
+
+    return pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+}
+
+function showPdfViewerError(viewer) {
+    const canvas = viewer.querySelector('.pdf-canvas');
+    const error = viewer.querySelector('.pdf-error');
+    const status = viewer.querySelector('.pdf-page-status');
+
+    if (canvas) canvas.style.display = 'none';
+    if (error) error.hidden = false;
+    if (status) status.textContent = 'Preview indisponivel';
+
+    viewer.querySelectorAll('[data-pdf-action]').forEach(button => {
+        button.disabled = true;
+    });
 }
 
 // Extrai download URL do Google Drive
@@ -324,44 +504,62 @@ function extractDriveFileId(url) {
 
 // Gera embed de vídeo
 function getVideoEmbed(url) {
+    const safeUrl = sanitizeHttpsUrl(url);
+    if (!safeUrl) return '';
+
     // YouTube
     let videoId = null;
-    if (url.includes('youtube.com/watch')) {
-        const params = new URL(url).searchParams;
-        videoId = params.get('v');
-    } else if (url.includes('youtu.be/')) {
-        videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    const parsed = new URL(safeUrl);
+    if (parsed.hostname === 'www.youtube.com' || parsed.hostname === 'youtube.com') {
+        videoId = parsed.searchParams.get('v');
+    } else if (parsed.hostname === 'youtu.be') {
+        videoId = parsed.pathname.split('/').filter(Boolean)[0];
     }
 
     if (videoId) {
-        return `<iframe src="https://www.youtube.com/embed/${videoId}" class="video-player" allowfullscreen></iframe>`;
+        return `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(videoId)}" class="video-player" allowfullscreen></iframe>`;
     }
 
     // Google Drive video
-    const driveId = extractDriveFileId(url);
+    const driveId = extractDriveFileId(safeUrl);
     if (driveId) {
         return `<iframe src="https://drive.google.com/file/d/${driveId}/preview" class="video-player" allowfullscreen></iframe>`;
     }
 
     // Fallback: link direto
-    return `<a href="${url}" target="_blank" class="btn btn-small">Abrir vídeo</a>`;
+    return '';
+}
+
+function getProjectFileByIndex(fileIndex) {
+    const index = Number(fileIndex);
+    if (!currentProject || !Number.isInteger(index) || index < 0) return null;
+
+    if (index === 0) {
+        if (!currentProject.mainFile) return null;
+        return {
+            name: currentProject.mainFile.name || 'main.py',
+            content: currentProject.mainFile.content || ''
+        };
+    }
+
+    const lib = currentProject.libraries && currentProject.libraries[index - 1];
+    if (!lib) return null;
+
+    return {
+        name: lib.name || 'biblioteca.py',
+        content: lib.content || ''
+    };
 }
 
 // Preview do código
-function previewCode(filename, fileIndex) {
-    if (!currentProject) return;
-
-    let content = '';
-    if (fileIndex === 0) {
-        content = currentProject.mainFile.content;
-    } else {
-        content = currentProject.libraries[fileIndex - 1].content;
-    }
+function previewCode(fileIndex) {
+    const file = getProjectFileByIndex(fileIndex);
+    if (!file) return;
 
     // Abre modal de preview
     const modal = document.getElementById('codePreviewModal');
-    document.getElementById('codePreviewTitle').textContent = filename;
-    document.getElementById('codePreviewContent').textContent = content;
+    document.getElementById('codePreviewTitle').textContent = file.name;
+    document.getElementById('codePreviewContent').textContent = file.content;
     modal.classList.add('active');
 }
 
@@ -371,21 +569,15 @@ function closeCodePreview() {
 }
 
 // Download de arquivo .py
-function downloadPyFile(filename, fileIndex) {
-    if (!currentProject) return;
+function downloadPyFile(fileIndex) {
+    const file = getProjectFileByIndex(fileIndex);
+    if (!file) return;
 
-    let content = '';
-    if (fileIndex === 0) {
-        content = currentProject.mainFile.content;
-    } else {
-        content = currentProject.libraries[fileIndex - 1].content;
-    }
-
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([file.content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename;
+    a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -468,15 +660,39 @@ function isProjectOwner(project) {
     return user && project.authorId === user.uid;
 }
 
+async function isCurrentUserAdmin() {
+    const user = auth.currentUser;
+    if (!user) return false;
+
+    if (window.currentUserIsAdmin === true) return true;
+
+    try {
+        const tokenResult = await user.getIdTokenResult();
+        const adminEmails = typeof ADMIN_EMAILS !== 'undefined' ? ADMIN_EMAILS : [];
+        const email = (tokenResult.claims.email || user.email || '').toLowerCase();
+        window.currentUserIsAdmin = tokenResult.claims.admin === true || adminEmails.includes(email);
+        return window.currentUserIsAdmin;
+    } catch (error) {
+        console.error('Erro ao verificar admin:', error);
+        return false;
+    }
+}
+
+async function canManageProject(project) {
+    return isProjectOwner(project) || await isCurrentUserAdmin();
+}
+
 // Abre modal de edição preenchido com dados do projeto atual
-function openEditProjectModal() {
-    if (!currentProject || !isProjectOwner(currentProject)) return;
+async function openEditProjectModal() {
+    if (!currentProject || !(await canManageProject(currentProject))) return;
 
     document.getElementById('editProjectTitle').value = currentProject.title;
     document.getElementById('editProjectDescription').value = currentProject.description;
-    document.getElementById('editProjectVideo').value = currentProject.videoURL;
-    document.getElementById('editPdfLinks').value = (currentProject.pdfLinks || []).join('\n');
-    document.getElementById('editExtraLinks').value = (currentProject.extraLinks || []).join('\n');
+    document.getElementById('editProjectMaterials').value = currentProject.materials || '';
+    document.getElementById('editProjectVideo').value = currentProject.videoURL || '';
+    document.getElementById('editProjectGithub').value = currentProject.githubURL || '';
+    document.getElementById('editLessonPdf').value = '';
+    document.getElementById('editProjectImage').value = '';
 
     // Carrega tags BNCC existentes
     bnccTagState.edit = (currentProject.bnccCodes || []).slice();
@@ -506,28 +722,59 @@ async function saveProjectEdit() {
     if (!currentProject || !currentProjectId) return;
 
     const user = auth.currentUser;
-    if (!user || user.uid !== currentProject.authorId) {
+    if (!user || !(await canManageProject(currentProject))) {
         alert('Você não tem permissão para editar este projeto.');
         return;
     }
-
     const title = document.getElementById('editProjectTitle').value.trim();
     const description = document.getElementById('editProjectDescription').value.trim();
+    const materials = normalizeMaterialsInput(document.getElementById('editProjectMaterials').value);
     const videoURL = document.getElementById('editProjectVideo').value.trim();
-    const pdfLinksText = document.getElementById('editPdfLinks').value.trim();
-    const extraLinksText = document.getElementById('editExtraLinks').value.trim();
+    const githubURL = document.getElementById('editProjectGithub').value.trim();
+    const lessonPdfInput = document.getElementById('editLessonPdf');
+    const lessonPdfFile = lessonPdfInput.files[0] || null;
     const mainFileInput = document.getElementById('editMainFile');
     const librariesInput = document.getElementById('editLibraries');
-    const imageURL = document.getElementById('editProjectImage').value.trim();
+    const coverInput = document.getElementById('editProjectImage');
+    const coverFile = coverInput.files[0] || null;
 
     // Validações
     if (!title) return alert('Preencha o nome do projeto.');
     if (title.length > 100) return alert('Título muito longo. Máximo: 100 caracteres.');
     if (!description) return alert('Preencha a descrição.');
     if (description.length > 2000) return alert('Descrição muito longa. Máximo: 2000 caracteres.');
-    if (!videoURL) return alert('Coloque o link do vídeo.');
-    if (!pdfLinksText) return alert('Coloque pelo menos um link de PDF.');
+    try {
+        validateMaterialsList(materials);
+    } catch (e) {
+        return alert(e.message);
+    }
+    if (!currentProject.lessonPdfURL && !(currentProject.pdfLinks && currentProject.pdfLinks.length) && !lessonPdfFile) {
+        return alert('Envie o PDF com plano de aula e estudo dirigido.');
+    }
     if (bnccTagState.edit.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
+    if (bnccTagState.edit.length > 10) return alert('Selecione no máximo 10 códigos BNCC por projeto.');
+    if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
+    if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
+
+    if (videoURL && !isValidVideoLink(videoURL)) {
+        return alert('O link do vídeo deve ser do YouTube ou Google Drive.');
+    }
+
+    if (githubURL && !isValidGithubLink(githubURL)) {
+        return alert('O link do GitHub deve apontar para um repositório. Ex: https://github.com/usuario/repositorio');
+    }
+
+    try {
+        validateCoverImage(coverFile);
+    } catch (e) {
+        return alert(e.message);
+    }
+
+    try {
+        validateLessonPdf(lessonPdfFile);
+    } catch (e) {
+        return alert(e.message);
+    }
 
     const saveBtn = document.getElementById('saveEditBtn');
     saveBtn.disabled = true;
@@ -537,9 +784,11 @@ async function saveProjectEdit() {
         const updateData = {
             title: title,
             description: description,
+            materials: materials,
             videoURL: videoURL,
-            pdfLinks: pdfLinksText.split('\n').map(l => l.trim()).filter(l => l),
-            extraLinks: extraLinksText ? extraLinksText.split('\n').map(l => l.trim()).filter(l => l) : [],
+            githubURL: githubURL,
+            pdfLinks: currentProject.pdfLinks || [],
+            extraLinks: [],
             bnccCodes: bnccTagState.edit.slice(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
@@ -563,9 +812,28 @@ async function saveProjectEdit() {
             updateData.libraries = libs;
         }
 
-        // Se preencheu nova imagem de capa, atualiza
-        if (imageURL) {
-            updateData.imageURL = imageURL;
+        // Se enviou nova imagem de capa, atualiza
+        if (coverFile) {
+            const coverUpload = await uploadProjectCover(coverFile, currentProject.authorId, currentProjectId);
+            updateData.imageURL = coverUpload.imageURL;
+            updateData.imagePath = coverUpload.imagePath;
+            updateData.imageMeta = coverUpload.imageMeta;
+
+            if (currentProject.imagePath && currentProject.imagePath !== coverUpload.imagePath) {
+                await deleteProjectCover(currentProject.imagePath);
+            }
+        }
+
+        if (lessonPdfFile) {
+            const lessonUpload = await uploadLessonPdf(lessonPdfFile, currentProject.authorId, currentProjectId);
+            updateData.lessonPdfURL = lessonUpload.lessonPdfURL;
+            updateData.lessonPdfPath = lessonUpload.lessonPdfPath;
+            updateData.lessonPdfMeta = lessonUpload.lessonPdfMeta;
+            updateData.pdfLinks = [];
+
+            if (currentProject.lessonPdfPath && currentProject.lessonPdfPath !== lessonUpload.lessonPdfPath) {
+                await deleteLessonPdf(currentProject.lessonPdfPath);
+            }
         }
 
         await db.collection('projects').doc(currentProjectId).update(updateData);
@@ -587,9 +855,8 @@ async function saveProjectEdit() {
 // Deletar projeto atual
 async function deleteCurrentProject() {
     if (!currentProject || !currentProjectId) return;
-    
     const user = auth.currentUser;
-    if (!user || user.uid !== currentProject.authorId) {
+    if (!user || !(await canManageProject(currentProject))) {
         alert('Você não tem permissão para excluir este projeto.');
         return;
     }
@@ -599,12 +866,20 @@ async function deleteCurrentProject() {
     }
     
     try {
+        await deleteProjectCover(currentProject.imagePath);
+        await deleteLessonPdf(currentProject.lessonPdfPath);
+
         await db.collection('projects').doc(currentProjectId).delete();
 
         // Decrementa contador de projetos do autor
-        await db.collection('users').doc(user.uid).update({
-            projectCount: firebase.firestore.FieldValue.increment(-1)
-        });
+        try {
+            await db.collection('users').doc(currentProject.authorId).update({
+                projectCount: firebase.firestore.FieldValue.increment(-1),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (counterError) {
+            console.warn('Projeto excluído, mas não foi possível atualizar contador:', counterError);
+        }
 
         // Volta para a home
         backToHome();
@@ -618,3 +893,10 @@ async function deleteCurrentProject() {
         alert('Erro ao excluir projeto. Tente novamente.');
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const detailContainer = document.getElementById('projectDetailContent');
+    if (detailContainer) {
+        detailContainer.addEventListener('click', handleProjectDetailAction);
+    }
+});

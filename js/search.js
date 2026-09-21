@@ -12,18 +12,25 @@ const SEARCH_CONFIG = {
 // Cache de projetos para busca rápida
 let projectsCache = [];
 let searchTimeout = null;
+let searchRequestId = 0;
+let isSearchActive = false;
 
 /**
  * Inicializa o sistema de busca
  */
 function initSearch() {
     const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    
+    const projectsGrid = document.getElementById('projectsGrid');
+
     if (!searchInput) return;
-    
-    // Carrega cache inicial
-    loadProjectsCache();
+
+    if (projectsGrid) {
+        projectsGrid.addEventListener('click', (e) => {
+            if (e.target.closest('[data-search-action="clear"]')) {
+                clearSearch();
+            }
+        });
+    }
     
     // Listener com debounce
     searchInput.addEventListener('input', (e) => {
@@ -50,51 +57,36 @@ function initSearch() {
 }
 
 /**
- * Carrega projetos em cache para busca rápida
- */
-async function loadProjectsCache() {
-    try {
-        const snapshot = await db.collection('projects').get();
-        projectsCache = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-    } catch (error) {
-        console.error('Erro ao carregar cache:', error);
-    }
-}
-
-/**
  * Realiza a busca por título ou código BNCC
  */
-function performSearch(query) {
-    const normalizedQuery = normalizeText(query);
-    
-    // Detecta se é código BNCC (formato: EFXXCXX ou EMIXCXX)
-    const isBNCCCode = /^[A-Z]{2}\d{2}[A-Z]\d{2}$/i.test(query);
-    
-    let results = [];
-    
-    if (isBNCCCode) {
-        // Busca exata por código BNCC
-        results = projectsCache.filter(project => {
-            if (!project.bnccCodes || !Array.isArray(project.bnccCodes)) return false;
-            return project.bnccCodes.some(code => 
-                code.toUpperCase() === query.toUpperCase()
-            );
-        });
-    } else {
-        // Busca por título (parcial)
-        results = projectsCache.filter(project => {
-            const title = normalizeText(project.title || '');
-            const description = normalizeText(project.description || '');
-            
-            return title.includes(normalizedQuery) || 
-                   description.includes(normalizedQuery);
-        });
+async function performSearch(query) {
+    query = (query || '').trim();
+    if (query.length < SEARCH_CONFIG.minChars) {
+        clearSearchResults();
+        return;
     }
-    
-    displaySearchResults(results, query, isBNCCCode);
+
+    const requestId = ++searchRequestId;
+    const normalizedQuery = normalizeText(query);
+    const normalizedCodeQuery = normalizeBnccQuery(query);
+    const isExactBNCCCode = /^[A-Z]{2}\d{2}CO\d{2}$/.test(normalizedCodeQuery);
+    const looksLikeBNCC = /^(EI|EF|EM)\d{0,2}(CO\d{0,2})?$/.test(normalizedCodeQuery);
+    let results = [];
+
+    try {
+        if (isExactBNCCCode) {
+            results = await searchByExactBnccCode(normalizedCodeQuery);
+        } else {
+            await refreshProjectsCache();
+            results = filterProjectsFromCache(normalizedQuery, normalizedCodeQuery);
+        }
+    } catch (error) {
+        console.error('Erro ao buscar projetos:', error);
+        results = filterProjectsFromCache(normalizedQuery, normalizedCodeQuery);
+    }
+
+    if (requestId !== searchRequestId) return;
+    displaySearchResults(results, query, looksLikeBNCC || isExactBNCCCode);
 }
 
 /**
@@ -108,12 +100,100 @@ function normalizeText(text) {
         .trim();
 }
 
+function normalizeBnccQuery(text) {
+    return (text || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '');
+}
+
+async function refreshProjectsCache() {
+    const snapshot = await db.collection('projects')
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+
+    projectsCache = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+}
+
+async function searchByExactBnccCode(code) {
+    try {
+        const snapshot = await db.collection('projects')
+            .where('bnccCodes', 'array-contains', code)
+            .limit(50)
+            .get();
+
+        const results = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })).sort(sortProjectsByDateDesc);
+
+        if (results.length === 0) {
+            await refreshProjectsCache();
+            return filterProjectsFromCache('', code).filter(project => {
+                return getProjectBnccCodes(project).some(projectCode => projectCode === code);
+            });
+        }
+
+        projectsCache = mergeProjectsCache(projectsCache, results);
+        return results;
+    } catch (error) {
+        await refreshProjectsCache();
+        return filterProjectsFromCache('', code).filter(project => {
+            return getProjectBnccCodes(project).some(projectCode => projectCode === code);
+        });
+    }
+}
+
+function mergeProjectsCache(current, incoming) {
+    const map = new Map();
+    current.concat(incoming).forEach(project => {
+        if (project && project.id) map.set(project.id, project);
+    });
+    return Array.from(map.values());
+}
+
+function getProjectBnccCodes(project) {
+    if (!project || !Array.isArray(project.bnccCodes)) return [];
+    return project.bnccCodes
+        .filter(Boolean)
+        .map(code => normalizeBnccQuery(String(code)));
+}
+
+function filterProjectsFromCache(normalizedTextQuery, normalizedCodeQuery) {
+    return projectsCache.filter(project => {
+        const title = normalizeText(project.title || '');
+        const description = normalizeText(project.description || '');
+        const authorName = normalizeText(project.authorName || '');
+        const bnccCodes = getProjectBnccCodes(project);
+
+        const matchesText = normalizedTextQuery
+            && (title.includes(normalizedTextQuery)
+                || description.includes(normalizedTextQuery)
+                || authorName.includes(normalizedTextQuery));
+
+        const matchesBncc = normalizedCodeQuery
+            && bnccCodes.some(code => code.includes(normalizedCodeQuery));
+
+        return matchesText || matchesBncc;
+    }).sort(sortProjectsByDateDesc);
+}
+
+function sortProjectsByDateDesc(a, b) {
+    const aDate = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+    const bDate = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+    return bDate - aDate;
+}
+
 /**
  * Exibe resultados da busca
  */
 function displaySearchResults(results, query, isBNCCCode) {
     const grid = document.getElementById('projectsGrid');
     const searchInfo = document.getElementById('searchInfo');
+    isSearchActive = true;
     
     // Limpa grid atual
     grid.innerHTML = '';
@@ -123,7 +203,7 @@ function displaySearchResults(results, query, isBNCCCode) {
         if (results.length === 0) {
             searchInfo.innerHTML = `<p class="search-empty">Nenhum projeto encontrado para "<strong>${escapeHtml(query)}</strong>"</p>`;
         } else {
-            const typeLabel = isBNCCCode ? 'código BNCC' : 'título';
+            const typeLabel = isBNCCCode ? 'código/tag BNCC' : 'nome ou descrição';
             searchInfo.innerHTML = `<p class="search-info">${results.length} projeto(s) encontrado(s) por ${typeLabel} "<strong>${escapeHtml(query)}</strong>"</p>`;
         }
     }
@@ -134,7 +214,7 @@ function displaySearchResults(results, query, isBNCCCode) {
             <div class="empty-search">
                 <span class="material-icons">search_off</span>
                 <p>Nenhum projeto encontrado</p>
-                <button class="btn btn-small" onclick="clearSearch()">Limpar busca</button>
+                <button type="button" class="btn btn-small" data-search-action="clear">Limpar busca</button>
             </div>
         `;
         return;
@@ -150,6 +230,8 @@ function displaySearchResults(results, query, isBNCCCode) {
  * Limpa resultados da busca e volta ao normal
  */
 function clearSearch() {
+    searchRequestId++;
+    isSearchActive = false;
     const searchInput = document.getElementById('searchInput');
     const searchInfo = document.getElementById('searchInfo');
     
@@ -164,35 +246,14 @@ function clearSearch() {
  * Limpa resultados da busca
  */
 function clearSearchResults() {
+    searchRequestId++;
     const searchInfo = document.getElementById('searchInfo');
     if (searchInfo) searchInfo.innerHTML = '';
-    loadProjects();
-}
 
-/**
- * Busca avançada com filtros múltiplos
- */
-async function advancedSearch(filters) {
-    let query = db.collection('projects');
-    
-    // Filtro por código BNCC
-    if (filters.bnccCode) {
-        query = query.where('bnccCodes', 'array-contains', filters.bnccCode.toUpperCase());
+    if (isSearchActive) {
+        isSearchActive = false;
+        loadProjects();
     }
-    
-    // Filtro por autor
-    if (filters.author) {
-        query = query.where('authorName', '==', filters.author);
-    }
-    
-    // Ordenação
-    query = query.orderBy('createdAt', 'desc');
-    
-    const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    }));
 }
 
 // Inicializa ao carregar

@@ -6,17 +6,11 @@
 class FlashManager {
     constructor(webSerial) {
         this.serial = webSerial;
-        this.isFlashing = false;
-        this.onProgressCallback = null;
         this.onStatusCallback = null;
-        this.originalDataCallback = null;
     }
 
-    /**
-     * Define callback para progresso (0-100)
-     */
-    onProgress(callback) {
-        this.onProgressCallback = callback;
+    static pythonStringLiteral(value) {
+        return JSON.stringify(String(value));
     }
 
     /**
@@ -51,7 +45,7 @@ class FlashManager {
      * 4. Aguarda resposta terminando com Ctrl+D
      */
     async execRaw(command, timeout = 10000) {
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve, reject) => {
             let response = '';
             let timeoutId = null;
             let originalCallback = null;
@@ -125,10 +119,12 @@ class FlashManager {
             }, timeout);
 
             try {
-                // Envia comando
-                await this.serial.write(command);
-                // Envia newline + Ctrl+D para executar (protocolo Raw REPL)
-                await this.serial.write('\n\x04');
+                this.serial.write(command)
+                    .then(() => this.serial.write('\n\x04'))
+                    .catch(error => {
+                        cleanup();
+                        reject(error);
+                    });
             } catch (error) {
                 cleanup();
                 reject(error);
@@ -141,21 +137,24 @@ class FlashManager {
      * Usa base64 para evitar problemas com caracteres especiais
      */
     async writeFile(filename, content) {
+        const fileLiteral = FlashManager.pythonStringLiteral(filename);
+
         // Converte para base64 de forma segura com Unicode
         // Usa encodeURIComponent + unescape para converter UTF-8 → binário
         const base64Content = btoa(
-            encodeURIComponent(content).replace(/%([0-9A-F]{2})/g, 
-                (match, p1) => String.fromCharCode('0x' + p1)
+            encodeURIComponent(content).replace(/%([0-9A-F]{2})/g,
+                (match, p1) => String.fromCharCode(parseInt(p1, 16))
             )
         );
-        
+
         // Divide em chunks se for muito grande (limite do buffer serial)
         const chunkSize = 512;
         const chunks = [];
         for (let i = 0; i < base64Content.length; i += chunkSize) {
             chunks.push(base64Content.substring(i, i + chunkSize));
         }
-        
+        if (chunks.length === 0) chunks.push('');
+
         // Comando Python para criar arquivo a partir de base64
         let cmd = `
 import ubinascii
@@ -163,21 +162,21 @@ import os
 
 # Remove arquivo existente se houver
 try:
-    os.remove('${filename}')
+    os.remove(${fileLiteral})
 except:
     pass
 
 # Cria novo arquivo
-data = ubinascii.a2b_base64('${chunks[0]}')
-with open('${filename}', 'wb') as f:
+data = ubinascii.a2b_base64(${FlashManager.pythonStringLiteral(chunks[0])})
+with open(${fileLiteral}, 'wb') as f:
     f.write(data)
 `;
 
         // Se tiver mais chunks, adiciona append
         for (let i = 1; i < chunks.length; i++) {
             cmd += `
-with open('${filename}', 'ab') as f:
-    f.write(ubinascii.a2b_base64('${chunks[i]}'))
+with open(${fileLiteral}, 'ab') as f:
+    f.write(ubinascii.a2b_base64(${FlashManager.pythonStringLiteral(chunks[i])}))
 `;
         }
 
@@ -190,202 +189,21 @@ with open('${filename}', 'ab') as f:
      * Cria diretório se não existir
      */
     async mkdir(dirname) {
+        const dirLiteral = FlashManager.pythonStringLiteral(dirname);
         const cmd = `
 import os
 try:
-    os.mkdir('${dirname}')
+    os.mkdir(${dirLiteral})
 except OSError:
     pass
 `;
         await this.execRaw(cmd);
-    }
-
-    /**
-     * Deleta arquivo do filesystem
-     */
-    async deleteFile(filename) {
-        const cmd = `
-import os
-try:
-    os.remove('${filename}')
-except OSError:
-    pass
-`;
-        await this.execRaw(cmd);
-    }
-
-    /**
-     * Lista arquivos no filesystem
-     */
-    async listFiles(path = '.') {
-        const cmd = `
-import os
-try:
-    files = os.listdir('${path}')
-    for f in files:
-        print(f)
-except:
-    pass
-`;
-        return await this.execRaw(cmd);
-    }
-
-    /**
-     * Faz download do arquivo da URL e retorna conteúdo como texto
-     */
-    async downloadFile(url) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            return await response.text();
-        } catch (error) {
-            throw new Error(`Download failed: ${error.message}`);
-        }
-    }
-
-    /**
-     * Flasheia arquivos na placa
-     * @param {string} mainFileURL - URL do Main.py
-     * @param {string[]} libraryURLs - URLs das bibliotecas
-     * @returns {Promise<boolean>} - true se sucesso
-     */
-    async flashToDevice(mainFileURL, libraryURLs = []) {
-        if (this.isFlashing) {
-            throw new Error('Flash already in progress');
-        }
-
-        if (!this.serial.connected) {
-            throw new Error('Device not connected. Please connect first.');
-        }
-
-        this.isFlashing = true;
-        this.originalDataCallback = this.serial.onDataCallback;
-        
-        this.updateStatus('Starting flash process...');
-
-        try {
-            const totalFiles = 1 + libraryURLs.length;
-            let completedFiles = 0;
-
-            // 1. Para qualquer execução atual
-            this.updateStatus('Stopping current execution...');
-            await this.serial.sendCtrlC();
-            await this.sleep(300);
-
-            // 2. Entra no Raw REPL
-            this.updateStatus('Entering Raw REPL mode...');
-            await this.enterRawREPL();
-            await this.sleep(500);
-
-            // 3. Download e flash do Main.py
-            this.updateStatus('Downloading main.py...');
-            const mainContent = await this.downloadFile(mainFileURL);
-            
-            this.updateStatus('Flashing main.py...');
-            await this.writeFile('main.py', mainContent);
-            completedFiles++;
-            this.updateProgress((completedFiles / totalFiles) * 100);
-            this.updateStatus('main.py ✓');
-
-            // 4. Download e flash das bibliotecas
-            if (libraryURLs.length > 0) {
-                // Cria diretório lib se necessário
-                await this.mkdir('lib');
-                
-                for (const libUrl of libraryURLs) {
-                    const filename = libUrl.split('/').pop() || 'lib.py';
-                    this.updateStatus(`Downloading ${filename}...`);
-                    const libContent = await this.downloadFile(libUrl);
-                    
-                    // Salva na pasta lib/
-                    const libPath = `lib/${filename}`;
-                    this.updateStatus(`Flashing ${libPath}...`);
-                    await this.writeFile(libPath, libContent);
-                    completedFiles++;
-                    this.updateProgress((completedFiles / totalFiles) * 100);
-                    this.updateStatus(`${libPath} ✓`);
-                }
-            }
-
-            // 5. Sai do Raw REPL
-            this.updateStatus('Exiting Raw REPL...');
-            await this.exitRawREPL();
-            await this.sleep(200);
-
-            // 6. Soft reset para executar main.py
-            this.updateStatus('Restarting device...');
-            await this.serial.sendCtrlD();
-            await this.sleep(500);
-
-            this.updateStatus('Flash completed successfully!');
-            this.updateProgress(100);
-            this.isFlashing = false;
-            
-            // Restaura callback original
-            this.serial.onDataCallback = this.originalDataCallback;
-            this.originalDataCallback = null;
-            
-            return true;
-
-        } catch (error) {
-            this.isFlashing = false;
-            this.updateStatus(`Error: ${error.message}`);
-            
-            // Tenta restaurar estado normal
-            try {
-                await this.exitRawREPL();
-                await this.sleep(100);
-                await this.serial.sendCtrlC();
-            } catch (e) {
-                // Ignora erro ao recuperar
-            }
-            
-            // Restaura callback original
-            if (this.originalDataCallback !== null) {
-                this.serial.onDataCallback = this.originalDataCallback;
-                this.originalDataCallback = null;
-            }
-            
-            throw error;
-        }
-    }
-
-    /**
-     * Executa código Python diretamente (útil para testes)
-     */
-    async execPython(code) {
-        if (!this.serial.connected) {
-            throw new Error('Device not connected');
-        }
-
-        const savedCallback = this.serial.onDataCallback;
-        
-        try {
-            await this.enterRawREPL();
-            const result = await this.execRaw(code);
-            await this.exitRawREPL();
-            return result;
-        } catch (error) {
-            await this.exitRawREPL();
-            throw error;
-        } finally {
-            this.serial.onDataCallback = savedCallback;
-        }
-    }
-
-    updateProgress(percent) {
-        if (this.onProgressCallback) {
-            this.onProgressCallback(Math.round(percent));
-        }
     }
 
     updateStatus(message) {
         if (this.onStatusCallback) {
             this.onStatusCallback(message);
         }
-        console.log('[Flash]', message);
     }
 
     sleep(ms) {
@@ -395,11 +213,3 @@ except:
 
 // Instância global (será inicializada com o WebSerial)
 window.FlashManager = FlashManager;
-
-// Função global para enviar código para o dispositivo
-window.flashToDevice = async function(mainFileURL, libraryURLs = []) {
-    if (!window.flashManager) {
-        throw new Error('FlashManager not initialized. Please initialize with WebSerial instance first.');
-    }
-    return await window.flashManager.flashToDevice(mainFileURL, libraryURLs);
-};

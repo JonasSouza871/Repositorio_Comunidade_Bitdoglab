@@ -244,8 +244,8 @@ function searchBnccCodes(query) {
         var level = getBnccLevel(code);
         if (!desc) return;
 
-        tooltip.innerHTML = '<span class="tooltip-code">' + code + '</span> — ' + desc
-            + (level ? '<span class="tooltip-level">' + level + '</span>' : '');
+        tooltip.innerHTML = '<span class="tooltip-code">' + escapeHtml(code) + '</span> — ' + escapeHtml(desc)
+            + (level ? '<span class="tooltip-level">' + escapeHtml(level) + '</span>' : '');
 
         // Posiciona acima do elemento
         var rect = el.getBoundingClientRect();

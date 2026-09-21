@@ -7,12 +7,35 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
 
+const ADMIN_EMAILS = [
+    'jonaseocara727@gmail.com',
+    'bitdoglab@gmail.com'
+];
+
+window.currentUserIsAdmin = false;
+
+async function refreshAdminStatus(user) {
+    if (!user) {
+        window.currentUserIsAdmin = false;
+        return false;
+    }
+
+    try {
+        const tokenResult = await user.getIdTokenResult(true);
+        const email = (tokenResult.claims.email || user.email || '').toLowerCase();
+        window.currentUserIsAdmin = tokenResult.claims.admin === true || ADMIN_EMAILS.includes(email);
+        return window.currentUserIsAdmin;
+    } catch (error) {
+        console.error('Erro ao verificar permissões de administrador:', error);
+        window.currentUserIsAdmin = false;
+        return false;
+    }
+}
+
 // Login com Google usando POPUP (mais confiável que redirect)
 async function loginWithGoogle() {
     try {
-        console.log('Iniciando login com popup...');
         const result = await auth.signInWithPopup(googleProvider);
-        console.log('Login bem-sucedido:', result.user.email);
         return result.user;
     } catch (error) {
         console.error('Erro no login:', error.code, error.message);
@@ -22,7 +45,7 @@ async function loginWithGoogle() {
             alert('Popup bloqueado! Permita popups para este site e tente novamente.');
         } else if (error.code === 'auth/popup-closed-by-user') {
             // Usuário fechou o popup, não faz nada
-            console.log('Login cancelado pelo usuário');
+            return null;
         } else if (error.code === 'auth/unauthorized-domain') {
             alert('Domínio não autorizado. Contate o administrador.');
         } else if (error.code === 'auth/requests-from-referer-http://127.0.0.1:5500-are-blocked' || 
@@ -31,7 +54,7 @@ async function loginWithGoogle() {
         } else {
             alert('Erro ao fazer login: ' + error.message);
         }
-        throw error;
+        return null;
     }
 }
 
@@ -39,7 +62,6 @@ async function loginWithGoogle() {
 async function logout() {
     try {
         await auth.signOut();
-        console.log('Logout realizado');
     } catch (error) {
         console.error('Erro no logout:', error);
     }
@@ -47,8 +69,6 @@ async function logout() {
 
 // Listener de estado de autenticação
 auth.onAuthStateChanged(async (user) => {
-    console.log('Auth state changed:', user ? user.email : 'null');
-    
     const loginBtn = document.getElementById('loginBtn');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
@@ -56,6 +76,8 @@ auth.onAuthStateChanged(async (user) => {
     const addProjectBtn = document.getElementById('addProjectBtn');
 
     if (user) {
+        await refreshAdminStatus(user);
+
         // Usuário logado
         loginBtn.style.display = 'none';
         userInfo.style.display = 'flex';
@@ -64,14 +86,18 @@ auth.onAuthStateChanged(async (user) => {
         if (addProjectBtn) addProjectBtn.style.display = 'flex';
 
         // Verifica se é primeiro login
-        checkFirstLogin(user.uid).then((isFirstLogin) => {
+        checkFirstLogin(user.uid).then(async (isFirstLogin) => {
             if (isFirstLogin) {
                 openProfileModal(user);
+            } else {
+                await removeLegacyPublicEmail(user.uid);
             }
         }).catch((err) => {
             console.error('Erro checkFirstLogin:', err);
         });
     } else {
+        window.currentUserIsAdmin = false;
+
         // Usuário deslogado
         loginBtn.style.display = 'flex';
         userInfo.style.display = 'none';
@@ -85,7 +111,7 @@ auth.onAuthStateChanged(async (user) => {
 });
 
 // ==========================================
-// Event Listeners (substitui onclick inline)
+// Event Listeners
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     // Login/Logout
@@ -111,6 +137,19 @@ document.addEventListener('DOMContentLoaded', function() {
 async function checkFirstLogin(uid) {
     const doc = await db.collection('users').doc(uid).get();
     return !doc.exists;
+}
+
+async function removeLegacyPublicEmail(uid) {
+    try {
+        await db.collection('users').doc(uid).update({
+            email: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch (error) {
+        if (error.code !== 'not-found' && error.code !== 'permission-denied') {
+            console.warn('Não foi possível remover email legado do perfil:', error);
+        }
+    }
 }
 
 // Abre modal de cadastro de perfil
@@ -141,8 +180,16 @@ async function saveProfile() {
         alert('Por favor, preencha seu nome.');
         return;
     }
+    if (name.length > 100) {
+        alert('Nome muito longo. Máximo: 100 caracteres.');
+        return;
+    }
     if (!bio) {
         alert('Por favor, escreva uma bio.');
+        return;
+    }
+    if (bio.length > 200) {
+        alert('Bio muito longa. Máximo: 200 caracteres.');
         return;
     }
 
@@ -150,7 +197,6 @@ async function saveProfile() {
         await db.collection('users').doc(user.uid).set({
             name: name,
             bio: bio,
-            email: user.email,
             photoURL: user.photoURL || '',
             projectCount: 0,
             commentCount: 0,

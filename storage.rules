@@ -1,0 +1,50 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isGoogleUser() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && (
+          request.auth.token.admin == true
+          || request.auth.token.email == 'jonaseocara727@gmail.com'
+          || request.auth.token.email == 'bitdoglab@gmail.com'
+        );
+    }
+
+    function validProjectPath(userId, projectId) {
+      return (request.auth.uid == userId || isAdmin())
+        && projectId.size() >= 10
+        && projectId.size() <= 80
+        && projectId.matches('[A-Za-z0-9_-]+');
+    }
+
+    match /project-covers/{userId}/{projectId}/cover {
+      allow read: if true;
+      allow create, update: if isGoogleUser()
+        && validProjectPath(userId, projectId)
+        && request.resource.size > 0
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /project-guides/{userId}/{projectId}/lesson-plan {
+      allow read: if true;
+      allow create, update: if isGoogleUser()
+        && validProjectPath(userId, projectId)
+        && request.resource.size > 0
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

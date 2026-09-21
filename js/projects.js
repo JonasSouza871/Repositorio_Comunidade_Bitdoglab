@@ -3,7 +3,7 @@
  * Comunidade BitDogLab
  *
  * Arquivos .py → conteúdo salvo como texto no Firestore
- * PDFs/extras → links do Google Drive
+ * PDF pedagógico/imagens → Firebase Storage
  */
 
 // Limites de tamanho
@@ -13,9 +13,13 @@ const LIMITS = {
     MAX_LIBRARIES: 10,            // Máximo 10 bibliotecas
     TITLE_MAX_CHARS: 100,         // Título max 100 caracteres
     DESCRIPTION_MAX_CHARS: 2000,  // Descrição max 2000 caracteres
-    MAX_PDF_LINKS: 5,             // Máximo 5 links de PDF
-    MAX_EXTRA_LINKS: 5            // Máximo 5 links extras
+    MATERIALS_MAX_CHARS: 2000,    // Lista de materiais max 2000 caracteres
+    COVER_IMAGE_MAX_MB: 2,        // Imagem de capa max 2MB
+    LESSON_PDF_MAX_MB: 10,        // Plano de aula/estudo dirigido max 10MB
+    MAX_PROJECTS_PER_USER: 20     // Limite prático por usuário
 };
+
+const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 // Estado das tags BNCC por modal
 const bnccTagState = {
@@ -44,11 +48,12 @@ function closeProjectModal() {
 function clearProjectForm() {
     document.getElementById('projectTitle').value = '';
     document.getElementById('projectDescription').value = '';
+    document.getElementById('projectMaterials').value = '';
     document.getElementById('projectVideo').value = '';
+    document.getElementById('projectGithub').value = '';
     document.getElementById('projectMainFile').value = '';
     document.getElementById('projectLibraries').value = '';
-    document.getElementById('projectPdfLinks').value = '';
-    document.getElementById('projectExtraLinks').value = '';
+    document.getElementById('projectLessonPdf').value = '';
     document.getElementById('projectImage').value = '';
     document.getElementById('uploadProgress').style.display = 'none';
     bnccTagState.project = [];
@@ -73,46 +78,218 @@ function validateFileSize(file, maxKB) {
     }
 }
 
-// Valida se é link do Google Drive
-function isValidLink(url) {
-    return url.includes('drive.google') || url.includes('youtube') || url.includes('youtu.be') || url.includes('docs.google');
+// Valida imagem de capa
+function validateCoverImage(file) {
+    if (!file) return;
+
+    if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+        throw new Error('A imagem de capa deve ser JPG, PNG, WEBP ou GIF.');
+    }
+
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > LIMITS.COVER_IMAGE_MAX_MB) {
+        throw new Error(`Imagem muito grande. Máximo: ${LIMITS.COVER_IMAGE_MAX_MB}MB.`);
+    }
 }
 
-// Parseia links (um por linha)
-function parseLinks(text) {
-    return text.split('\n')
+// Valida PDF pedagógico
+function validateLessonPdf(file) {
+    if (!file) return;
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+        throw new Error('O plano de aula deve ser um arquivo PDF.');
+    }
+
+    const sizeMB = file.size / (1024 * 1024);
+    if (sizeMB > LIMITS.LESSON_PDF_MAX_MB) {
+        throw new Error(`PDF muito grande. Máximo: ${LIMITS.LESSON_PDF_MAX_MB}MB.`);
+    }
+}
+
+function normalizeMaterialsInput(value) {
+    return value
+        .split(/\r?\n/)
         .map(line => line.trim())
-        .filter(line => line.length > 0);
+        .filter(line => line.length > 0)
+        .join('\n');
+}
+
+function validateMaterialsList(materials) {
+    if (!materials) {
+        throw new Error('Preencha os materiais utilizados no projeto.');
+    }
+
+    if (materials.length > LIMITS.MATERIALS_MAX_CHARS) {
+        throw new Error(`Lista de materiais muito longa. Máximo: ${LIMITS.MATERIALS_MAX_CHARS} caracteres.`);
+    }
+
+    const lines = materials.split('\n');
+    const invalidLine = lines.find(line => !/^\d+([,.]\d+)?\s*x\s+\S+/i.test(line));
+    if (invalidLine) {
+        throw new Error(`Revise a linha "${invalidLine}". Use o formato quantidade + componente, por exemplo: 2x LED vermelho.`);
+    }
+}
+
+async function uploadLessonPdf(file, userId, projectId) {
+    if (!file) return { lessonPdfURL: '', lessonPdfPath: '', lessonPdfMeta: null };
+    if (typeof storage === 'undefined') {
+        throw new Error('Firebase Storage não foi inicializado.');
+    }
+
+    validateLessonPdf(file);
+
+    const lessonPdfPath = `project-guides/${userId}/${projectId}/lesson-plan`;
+    const ref = storage.ref().child(lessonPdfPath);
+    const snapshot = await ref.put(file, {
+        contentType: 'application/pdf',
+        customMetadata: {
+            originalName: file.name
+        }
+    });
+    const lessonPdfURL = await snapshot.ref.getDownloadURL();
+
+    return {
+        lessonPdfURL: lessonPdfURL,
+        lessonPdfPath: lessonPdfPath,
+        lessonPdfMeta: {
+            name: file.name,
+            size: file.size,
+            type: 'application/pdf'
+        }
+    };
+}
+
+async function deleteLessonPdf(lessonPdfPath) {
+    if (!lessonPdfPath || typeof storage === 'undefined') return;
+
+    try {
+        await storage.ref().child(lessonPdfPath).delete();
+    } catch (error) {
+        console.warn('Não foi possível remover o PDF do Storage:', error);
+    }
+}
+
+// Faz upload da imagem de capa para o Firebase Storage
+async function uploadProjectCover(file, userId, projectId) {
+    if (!file) return { imageURL: '', imagePath: '', imageMeta: null };
+    if (typeof storage === 'undefined') {
+        throw new Error('Firebase Storage não foi inicializado.');
+    }
+
+    validateCoverImage(file);
+
+    const imagePath = `project-covers/${userId}/${projectId}/cover`;
+    const ref = storage.ref().child(imagePath);
+    const snapshot = await ref.put(file, {
+        contentType: file.type,
+        customMetadata: {
+            originalName: file.name
+        }
+    });
+    const imageURL = await snapshot.ref.getDownloadURL();
+
+    return {
+        imageURL: imageURL,
+        imagePath: imagePath,
+        imageMeta: {
+            name: file.name,
+            size: file.size,
+            type: file.type
+        }
+    };
+}
+
+// Remove arquivo do Storage, sem interromper fluxos importantes se falhar
+async function deleteProjectCover(imagePath) {
+    if (!imagePath || typeof storage === 'undefined') return;
+
+    try {
+        await storage.ref().child(imagePath).delete();
+    } catch (error) {
+        console.warn('Não foi possível remover a capa do Storage:', error);
+    }
+}
+
+function isValidGithubLink(url) {
+    return /^https:\/\/(www\.)?github\.com\/[^/\s]+\/[^/\s]+\/?/.test(url);
+}
+
+function isValidVideoLink(url) {
+    const safeUrl = sanitizeHttpsUrl(url);
+    if (!safeUrl) return false;
+
+    try {
+        const parsed = new URL(safeUrl);
+        return parsed.hostname === 'youtube.com'
+            || parsed.hostname === 'www.youtube.com'
+            || parsed.hostname === 'youtu.be'
+            || parsed.hostname === 'drive.google.com';
+    } catch (error) {
+        return false;
+    }
 }
 
 // Publica projeto
 async function publishProject() {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+        alert('Faça login novamente para publicar o projeto.');
+        return;
+    }
+
+    const publishBtn = document.getElementById('publishBtn');
+    if (publishBtn && publishBtn.disabled) return;
 
     // Coleta dados do formulário
     const title = document.getElementById('projectTitle').value.trim();
     const description = document.getElementById('projectDescription').value.trim();
+    const materials = normalizeMaterialsInput(document.getElementById('projectMaterials').value);
     const videoURL = document.getElementById('projectVideo').value.trim();
+    const githubURL = document.getElementById('projectGithub').value.trim();
     const mainFileInput = document.getElementById('projectMainFile');
     const librariesInput = document.getElementById('projectLibraries');
-    const pdfLinksText = document.getElementById('projectPdfLinks').value.trim();
-    const extraLinksText = document.getElementById('projectExtraLinks').value.trim();
-    const imageURL = document.getElementById('projectImage').value.trim();
+    const lessonPdfInput = document.getElementById('projectLessonPdf');
+    const lessonPdfFile = lessonPdfInput.files[0] || null;
+    const coverInput = document.getElementById('projectImage');
+    const coverFile = coverInput.files[0] || null;
 
     // Validações obrigatórias
     if (!title) return alert('Preencha o nome do projeto.');
     if (title.length > LIMITS.TITLE_MAX_CHARS) return alert(`Título muito longo. Máximo: ${LIMITS.TITLE_MAX_CHARS} caracteres.`);
     if (!description) return alert('Preencha a descrição.');
     if (description.length > LIMITS.DESCRIPTION_MAX_CHARS) return alert(`Descrição muito longa. Máximo: ${LIMITS.DESCRIPTION_MAX_CHARS} caracteres.`);
-    if (!videoURL) return alert('Coloque o link do vídeo.');
+    try {
+        validateMaterialsList(materials);
+    } catch (e) {
+        return alert(e.message);
+    }
     if (!mainFileInput.files[0]) return alert('Envie o arquivo Main.py.');
-    if (!pdfLinksText) return alert('Coloque pelo menos um link de PDF.');
+    if (!lessonPdfFile) return alert('Envie o PDF com plano de aula e estudo dirigido.');
     if (bnccTagState.project.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
+    if (bnccTagState.project.length > 10) return alert('Selecione no máximo 10 códigos BNCC por projeto.');
+    if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
+    if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
+
+    try {
+        validateCoverImage(coverFile);
+    } catch (e) {
+        return alert(e.message);
+    }
 
     // Validação do vídeo
-    if (!videoURL.includes('youtube') && !videoURL.includes('youtu.be') && !videoURL.includes('drive.google')) {
+    if (videoURL && !isValidVideoLink(videoURL)) {
         return alert('O link do vídeo deve ser do YouTube ou Google Drive.');
+    }
+
+    if (githubURL && !isValidGithubLink(githubURL)) {
+        return alert('O link do GitHub deve apontar para um repositório. Ex: https://github.com/usuario/repositorio');
+    }
+
+    try {
+        validateLessonPdf(lessonPdfFile);
+    } catch (e) {
+        return alert(e.message);
     }
 
     // Validação do Main.py
@@ -138,30 +315,34 @@ async function publishProject() {
         }
     }
 
-    // Validação dos links de PDF
-    const pdfLinks = parseLinks(pdfLinksText);
-    if (pdfLinks.length > LIMITS.MAX_PDF_LINKS) {
-        return alert(`Máximo de ${LIMITS.MAX_PDF_LINKS} links de PDF.`);
-    }
-    for (const link of pdfLinks) {
-        if (!isValidLink(link)) {
-            return alert(`Link inválido: ${link}\nUse links do Google Drive.`);
-        }
+    let userData = null;
+    try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        userData = userDoc.data();
+    } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+        return alert('Erro ao carregar seu perfil. Tente novamente.');
     }
 
-    // Validação dos links extras
-    const extraLinks = parseLinks(extraLinksText);
-    if (extraLinks.length > LIMITS.MAX_EXTRA_LINKS) {
-        return alert(`Máximo de ${LIMITS.MAX_EXTRA_LINKS} links extras.`);
+    if (!userData) {
+        return alert('Complete seu perfil antes de publicar projetos.');
     }
 
-    const publishBtn = document.getElementById('publishBtn');
+    if ((userData.projectCount || 0) >= LIMITS.MAX_PROJECTS_PER_USER) {
+        return alert(`Limite de ${LIMITS.MAX_PROJECTS_PER_USER} projetos por usuário atingido.`);
+    }
+
     const progressBar = document.getElementById('uploadProgress');
     const progressFill = document.getElementById('progressFill');
     const progressText = document.getElementById('progressText');
 
     publishBtn.disabled = true;
     progressBar.style.display = 'block';
+
+    let currentStep = 'iniciar publicação';
+    let coverUpload = null;
+    let lessonUpload = null;
+    let projectSaved = false;
 
     try {
         // Lê Main.py
@@ -178,39 +359,61 @@ async function publishProject() {
             libraries.push({ name: libFiles[i].name, content: content });
         }
 
-        // Busca dados do perfil do autor
+        // Prepara para salvar projeto
         progressFill.style.width = '70%';
         progressText.textContent = 'Salvando projeto...';
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+
+        // Reserva ID do projeto e envia capa, se houver
+        const projectId = db.collection('projects').doc().id;
+        progressFill.style.width = '80%';
+        progressText.textContent = 'Enviando arquivos...';
+        currentStep = 'upload da imagem de capa';
+        coverUpload = await uploadProjectCover(coverFile, user.uid, projectId);
+        currentStep = 'upload do PDF pedagógico';
+        lessonUpload = await uploadLessonPdf(lessonPdfFile, user.uid, projectId);
 
         // Salva projeto no Firestore
-        const projectId = db.collection('projects').doc().id;
+        currentStep = 'salvar projeto no Firestore';
         await db.collection('projects').doc(projectId).set({
             title: title,
             description: description,
+            materials: materials,
             videoURL: videoURL,
-            imageURL: imageURL,
+            githubURL: githubURL,
+            imageURL: coverUpload.imageURL,
+            imagePath: coverUpload.imagePath,
+            imageMeta: coverUpload.imageMeta,
+            lessonPdfURL: lessonUpload.lessonPdfURL,
+            lessonPdfPath: lessonUpload.lessonPdfPath,
+            lessonPdfMeta: lessonUpload.lessonPdfMeta,
             authorId: user.uid,
             authorName: userData.name || user.displayName,
             authorPhoto: userData.photoURL || user.photoURL || '',
             mainFile: { name: mainFile.name, content: mainContent },
             libraries: libraries,
-            pdfLinks: pdfLinks,
-            extraLinks: extraLinks,
+            pdfLinks: [],
+            extraLinks: [],
             bnccCodes: bnccTagState.project.slice(),
             commentCount: 0,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        projectSaved = true;
 
-        // Incrementa contador de projetos do autor
+        // Incrementa contador do autor sem bloquear o projeto se falhar.
         progressFill.style.width = '90%';
         progressText.textContent = 'Atualizando perfil...';
-        await db.collection('users').doc(user.uid).update({
-            projectCount: firebase.firestore.FieldValue.increment(1),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        currentStep = 'atualizar contador do usuário';
+        try {
+            await db.collection('users').doc(user.uid).update({
+                projectCount: firebase.firestore.FieldValue.increment(1),
+                commentCount: userData.commentCount || 0,
+                email: firebase.firestore.FieldValue.delete(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (counterError) {
+            console.warn('Projeto salvo, mas não foi possível atualizar contador:', counterError);
+        }
 
         progressFill.style.width = '100%';
         progressText.textContent = 'Projeto publicado!';
@@ -221,8 +424,21 @@ async function publishProject() {
         }, 1000);
 
     } catch (error) {
+        if (!projectSaved && coverUpload && coverUpload.imagePath) {
+            await deleteProjectCover(coverUpload.imagePath);
+        }
+        if (!projectSaved && lessonUpload && lessonUpload.lessonPdfPath) {
+            await deleteLessonPdf(lessonUpload.lessonPdfPath);
+        }
+
         console.error('Erro ao publicar:', error);
-        alert('Erro ao publicar projeto. Tente novamente.');
+        var message = error && error.message ? error.message : 'Erro desconhecido.';
+        if (error && error.code === 'permission-denied') {
+            message = 'Permissão negada pelo Firebase durante: ' + (typeof currentStep !== 'undefined' ? currentStep : 'publicação') + '.';
+        } else if (error && error.code && error.code.indexOf('storage/') === 0) {
+            message = 'Erro no Storage durante ' + (typeof currentStep !== 'undefined' ? currentStep : 'upload') + ': ' + message;
+        }
+        alert('Erro ao publicar projeto: ' + message);
     } finally {
         publishBtn.disabled = false;
     }
@@ -235,7 +451,6 @@ async function publishProject() {
 // Controle de inicialização
 const _bnccInitialized = {};
 let _bnccSelectedIndex = -1;
-let _bnccActivePrefix = null;
 
 /**
  * Inicializa o input de tags BNCC para um modal
@@ -253,19 +468,17 @@ function initBnccTagInput(prefix) {
     const container = document.getElementById(prefix + 'BnccContainer');
 
     input.addEventListener('input', function() {
-        _bnccActivePrefix = prefix;
         _bnccSelectedIndex = -1;
         const query = this.value.trim();
-        if (query.length < 2) {
-            suggestions.classList.remove('active');
-            suggestions.innerHTML = '';
-            return;
-        }
         showBnccSuggestions(prefix, query);
     });
 
+    input.addEventListener('focus', function() {
+        _bnccSelectedIndex = -1;
+        showBnccSuggestions(prefix, this.value.trim());
+    });
+
     input.addEventListener('keydown', function(e) {
-        _bnccActivePrefix = prefix;
         const items = suggestions.querySelectorAll('.bncc-suggestion-item');
 
         if (e.key === 'ArrowDown') {
@@ -304,6 +517,7 @@ function initBnccTagInput(prefix) {
 
     container.addEventListener('click', function() {
         input.focus();
+        showBnccSuggestions(prefix, input.value.trim());
     });
 }
 
@@ -320,28 +534,29 @@ document.addEventListener('click', function(e) {
 
 function showBnccSuggestions(prefix, query) {
     const suggestions = document.getElementById(prefix + 'BnccSuggestions');
-    const results = searchBnccCodes(query).filter(function(r) {
+    const results = searchBnccCodes(query || '').filter(function(r) {
         return !bnccTagState[prefix].includes(r.code);
     });
 
     if (results.length === 0) {
         var looksLikeCode = /^[A-Za-z]{2}\d{2}CO\d{2}$/i.test(query);
         if (looksLikeCode) {
-            suggestions.innerHTML = '<div class="bncc-error-msg">Código "' + query.toUpperCase() + '" não encontrado na BNCC de Computação.</div>';
+            suggestions.innerHTML = '<div class="bncc-error-msg">Código "' + escapeHtml(query.toUpperCase()) + '" não encontrado na BNCC de Computação.</div>';
         } else {
-            suggestions.innerHTML = '<div class="bncc-error-msg">Nenhum resultado para "' + query + '".</div>';
+            suggestions.innerHTML = '<div class="bncc-error-msg">Nenhum resultado para "' + escapeHtml(query) + '".</div>';
         }
         suggestions.classList.add('active');
         return;
     }
 
     var html = '';
-    var shown = results.slice(0, 8);
-    for (var i = 0; i < shown.length; i++) {
-        html += '<div class="bncc-suggestion-item" data-code="' + shown[i].code + '">'
-            + '<span class="suggestion-code">' + shown[i].code + '</span>'
-            + '<span class="suggestion-desc">' + shown[i].description + '</span>'
-            + '<span class="suggestion-level">' + shown[i].level + '</span>'
+    for (var i = 0; i < results.length; i++) {
+        html += '<div class="bncc-suggestion-item" data-code="' + escapeHtml(results[i].code) + '">'
+            + '<span class="suggestion-code">' + escapeHtml(results[i].code) + '</span>'
+            + '<span class="suggestion-content">'
+            + '<span class="suggestion-desc">' + escapeHtml(results[i].description) + '</span>'
+            + '<span class="suggestion-level">' + escapeHtml(results[i].level) + '</span>'
+            + '</span>'
             + '</div>';
     }
     suggestions.innerHTML = html;
@@ -376,10 +591,9 @@ function addBnccTag(prefix, code) {
     var input = document.getElementById(prefix + 'BnccInput');
     var suggestions = document.getElementById(prefix + 'BnccSuggestions');
     input.value = '';
-    suggestions.classList.remove('active');
-    suggestions.innerHTML = '';
     _bnccSelectedIndex = -1;
     input.focus();
+    showBnccSuggestions(prefix, '');
 }
 
 function removeBnccTag(prefix, code) {
@@ -403,13 +617,20 @@ function renderBnccTags(prefix) {
         var tag = document.createElement('span');
         tag.className = 'bncc-tag';
         tag.setAttribute('data-bncc', code);
-        tag.innerHTML = code + ' <span class="material-icons tag-remove" data-remove="' + prefix + '|' + code + '">close</span>';
+        tag.appendChild(document.createTextNode(code + ' '));
+
+        var remove = document.createElement('span');
+        remove.className = 'material-icons tag-remove';
+        remove.setAttribute('data-remove', prefix + '|' + code);
+        remove.textContent = 'close';
+        tag.appendChild(remove);
+
         container.insertBefore(tag, input);
     }
 }
 
 // ==========================================
-// Event Listeners (substitui onclick inline)
+// Event Listeners
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     // Modal de Novo Projeto
@@ -450,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Delegação de evento para remover tags BNCC
     document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('tag-remove') || e.target.parentElement.classList.contains('tag-remove')) {
+        if (e.target.classList.contains('tag-remove') || (e.target.parentElement && e.target.parentElement.classList.contains('tag-remove'))) {
             var span = e.target.classList.contains('tag-remove') ? e.target : e.target.parentElement;
             var data = span.getAttribute('data-remove');
             if (data) {
@@ -478,9 +699,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 searchClear.style.display = 'flex';
             } else {
                 searchClear.style.display = 'none';
-            }
-            if (typeof window.handleSearchInput === 'function') {
-                window.handleSearchInput(this.value);
             }
         });
     }

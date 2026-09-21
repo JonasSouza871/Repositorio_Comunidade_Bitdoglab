@@ -71,7 +71,7 @@
                     <div class="search-container">
                         <div class="search-box">
                             <span class="material-icons search-icon">search</span>
-                            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por título ou código BNCC (ex: EF03MA01)...">
+                            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome ou código BNCC (ex: EF03CO01)...">
                             <button class="search-clear" style="display: none;">
                                 <span class="material-icons">close</span>
                             </button>
@@ -152,14 +152,21 @@
                 <label class="form-label" for="editProjectTitle">Nome do Projeto *</label>
                 <input type="text" id="editProjectTitle" class="form-input" maxlength="100">
 
-                <label class="form-label">Imagem de Capa <span class="form-hint">(link do Drive, Imgur... deixe vazio para manter)</span></label>
-                <input type="url" id="editProjectImage" class="form-input" placeholder="https://drive.google.com/file/d/...">
+                <label class="form-label">Imagem de Capa <span class="form-hint">(apenas 1 imagem; JPG, PNG, WEBP ou GIF; deixe vazio para manter)</span></label>
+                <input type="file" id="editProjectImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
 
                 <label class="form-label" for="editProjectDescription">Descrição *</label>
                 <textarea id="editProjectDescription" class="form-textarea" rows="4"></textarea>
 
-                <label class="form-label" for="editProjectVideo">Link do Vídeo *</label>
-                <input type="url" id="editProjectVideo" class="form-input">
+                <label class="form-label" for="editProjectMaterials">Materiais Utilizados *</label>
+                <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho.</p>
+                <textarea id="editProjectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+
+                <label class="form-label" for="editProjectVideo">Link do Vídeo <span class="form-hint">(YouTube ou Google Drive; opcional)</span></label>
+                <input type="url" id="editProjectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
+
+                <label class="form-label" for="editProjectGithub">Link do GitHub <span class="form-hint">(opcional)</span></label>
+                <input type="url" id="editProjectGithub" class="form-input" placeholder="https://github.com/usuario/repositorio">
 
                 <label class="form-label">Substituir Main.py <span class="form-hint">(deixe vazio para manter o atual)</span></label>
                 <input type="file" id="editMainFile" class="form-file" accept=".py">
@@ -167,11 +174,8 @@
                 <label class="form-label">Substituir Bibliotecas <span class="form-hint">(deixe vazio para manter as atuais)</span></label>
                 <input type="file" id="editLibraries" class="form-file" accept=".py" multiple>
 
-                <label class="form-label">Links dos PDFs * <span class="form-hint">(um por linha)</span></label>
-                <textarea id="editPdfLinks" class="form-textarea" rows="3"></textarea>
-
-                <label class="form-label">Links extras <span class="form-hint">(um por linha)</span></label>
-                <textarea id="editExtraLinks" class="form-textarea" rows="2"></textarea>
+                <label class="form-label">Plano de aula e estudo dirigido <span class="form-hint">(PDF único; deixe vazio para manter)</span></label>
+                <input type="file" id="editLessonPdf" class="form-file" accept="application/pdf,.pdf">
 
                 <label class="form-label">
                     Códigos BNCC *
@@ -181,7 +185,7 @@
                 </label>
                 <div class="bncc-tag-input-wrapper" id="editBnccWrapper">
                     <div class="bncc-tags-container" id="editBnccContainer">
-                        <input type="text" class="bncc-tag-field" id="editBnccInput" placeholder="Ex: EF06CO02, algoritmo..." autocomplete="off">
+                        <input type="text" class="bncc-tag-field" id="editBnccInput" placeholder="Buscar ou selecionar habilidade..." autocomplete="off">
                     </div>
                     <div class="bncc-suggestions" id="editBnccSuggestions"></div>
                 </div>
@@ -215,19 +219,26 @@
                     <span class="material-icons">close</span>
                 </button>
             </div>
-            <p class="modal-subtitle">Preencha todos os campos para publicar seu projeto.</p>
+            <p class="modal-subtitle">Preencha os campos obrigatórios para publicar seu projeto.</p>
             <div class="modal-form">
                 <label class="form-label" for="projectTitle">Nome do Projeto *</label>
                 <input type="text" id="projectTitle" class="form-input" placeholder="Ex: Semáforo com LEDs RGB" maxlength="100">
 
-                <label class="form-label">Imagem de Capa <span class="form-hint">(link do Google Drive, Imgur, etc.)</span></label>
-                <input type="url" id="projectImage" class="form-input" placeholder="https://drive.google.com/file/d/...">
+                <label class="form-label">Imagem de Capa <span class="form-hint">(apenas 1 imagem; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
+                <input type="file" id="projectImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
 
                 <label class="form-label" for="projectDescription">Descrição *</label>
                 <textarea id="projectDescription" class="form-textarea" placeholder="Explique o que seu projeto faz, como funciona..." rows="4"></textarea>
 
-                <label class="form-label" for="projectVideo">Link do Vídeo (YouTube ou Google Drive) *</label>
+                <label class="form-label" for="projectMaterials">Materiais Utilizados *</label>
+                <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho. Isso ajuda outras pessoas a reproduzirem o projeto.</p>
+                <textarea id="projectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+
+                <label class="form-label" for="projectVideo">Link do Vídeo <span class="form-hint">(YouTube ou Google Drive; opcional)</span></label>
                 <input type="url" id="projectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
+
+                <label class="form-label" for="projectGithub">Link do GitHub <span class="form-hint">(opcional)</span></label>
+                <input type="url" id="projectGithub" class="form-input" placeholder="https://github.com/usuario/repositorio">
 
                 <label class="form-label">Main.py - Script principal * <span class="form-hint">(máx. 100KB)</span></label>
                 <input type="file" id="projectMainFile" class="form-file" accept=".py">
@@ -235,12 +246,9 @@
                 <label class="form-label">Bibliotecas (.py) <span class="form-hint">(máx. 10 arquivos, 100KB cada)</span></label>
                 <input type="file" id="projectLibraries" class="form-file" accept=".py" multiple>
 
-                <label class="form-label">Links dos PDFs - Google Drive * <span class="form-hint">(um link por linha, máx. 5)</span></label>
-                <p class="form-warning">Os links devem estar com acesso "Qualquer pessoa com o link" no Drive.</p>
-                <textarea id="projectPdfLinks" class="form-textarea" placeholder="https://drive.google.com/file/d/..." rows="3"></textarea>
-
-                <label class="form-label">Links extras - Google Drive <span class="form-hint">(um link por linha, máx. 5)</span></label>
-                <textarea id="projectExtraLinks" class="form-textarea" placeholder="https://drive.google.com/file/d/..." rows="2"></textarea>
+                <label class="form-label">Plano de aula e estudo dirigido * <span class="form-hint">(PDF único; máx. 10MB)</span></label>
+                <p class="form-warning">Formato livre, mas deve conter roteiro de aula, objetivos, materiais necessários, modo de uso e linguagem voltada a professores e estudantes do ensino fundamental ou médio.</p>
+                <input type="file" id="projectLessonPdf" class="form-file" accept="application/pdf,.pdf">
 
                 <label class="form-label">
                     Códigos BNCC *
@@ -250,7 +258,7 @@
                 </label>
                 <div class="bncc-tag-input-wrapper" id="projectBnccWrapper">
                     <div class="bncc-tags-container" id="projectBnccContainer">
-                        <input type="text" class="bncc-tag-field" id="projectBnccInput" placeholder="Ex: EF06CO02, algoritmo..." autocomplete="off">
+                        <input type="text" class="bncc-tag-field" id="projectBnccInput" placeholder="Buscar ou selecionar habilidade..." autocomplete="off">
                     </div>
                     <div class="bncc-suggestions" id="projectBnccSuggestions"></div>
                 </div>
@@ -262,7 +270,7 @@
                     <span id="progressText" class="progress-text">Enviando...</span>
                 </div>
 
-                <button id="publishBtn" class="btn btn-save">
+                <button type="button" id="publishBtn" class="btn btn-save">
                     <span class="material-icons">publish</span> Publicar Projeto
                 </button>
             </div>
@@ -290,7 +298,10 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="js/firebase-config.js"></script>
+    <script src="js/security.js"></script>
     <script src="js/auth.js"></script>
 
     <!-- Plataforma -->

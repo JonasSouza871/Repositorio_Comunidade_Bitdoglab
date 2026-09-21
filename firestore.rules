@@ -1,0 +1,277 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isGoogleUser() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isOwner(userId) {
+      return isGoogleUser() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || request.auth.token.email == 'jonaseocara727@gmail.com'
+          || request.auth.token.email == 'bitdoglab@gmail.com'
+        );
+    }
+
+    function validListQuery(maxLimit) {
+      return request.query.limit != null && request.query.limit <= maxLimit;
+    }
+
+    function underProjectLimit() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (
+          !('projectCount' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data)
+          || !(get(/databases/$(database)/documents/users/$(request.auth.uid)).data.projectCount is int)
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.projectCount < 20
+        );
+    }
+
+    function validUserPublicData(data) {
+      return data.keys().hasOnly([
+          'name', 'bio', 'photoURL', 'projectCount', 'commentCount',
+          'createdAt', 'updatedAt', 'linkedin', 'github'
+        ])
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 100
+        && data.bio is string
+        && data.bio.size() <= 200
+        && data.projectCount is int
+        && data.projectCount >= 0
+        && data.projectCount <= 20
+        && data.commentCount is int
+        && data.commentCount >= 0
+        && data.commentCount <= 500
+        && (!('photoURL' in data) || data.photoURL is string && data.photoURL.size() <= 1000)
+        && (!('linkedin' in data) || (
+          data.linkedin is string
+          && data.linkedin.size() <= 200
+          && (data.linkedin.size() == 0 || data.linkedin.matches('https://(www\\.)?linkedin\\.com/in/[^/ ]+/?'))
+        ))
+        && (!('github' in data) || (
+          data.github is string
+          && data.github.size() <= 200
+          && (data.github.size() == 0 || data.github.matches('https://(www\\.)?github\\.com/[^/ ]+/?'))
+        ));
+    }
+
+    function validNewUserData(data) {
+      return validUserPublicData(data)
+        && data.projectCount == 0
+        && data.commentCount == 0;
+    }
+
+    function validOwnerUserUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return validUserPublicData(request.resource.data)
+        && changed.hasOnly([
+          'name', 'bio', 'linkedin', 'github', 'projectCount', 'commentCount',
+          'updatedAt', 'email'
+        ])
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.photoURL == resource.data.photoURL
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.commentCount == resource.data.commentCount
+        && request.resource.data.projectCount >= 0
+        && request.resource.data.projectCount <= 20
+        && request.resource.data.projectCount >= resource.data.projectCount - 1
+        && request.resource.data.projectCount <= resource.data.projectCount + 1;
+    }
+
+    function validImageMeta(meta) {
+      return meta is map
+        && meta.keys().hasOnly(['name', 'size', 'type'])
+        && meta.name is string
+        && meta.name.size() <= 120
+        && meta.size is int
+        && meta.size >= 0
+        && meta.size <= 2 * 1024 * 1024
+        && meta.type is string
+        && meta.type.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    function validLessonPdfMeta(meta) {
+      return meta is map
+        && meta.keys().hasOnly(['name', 'size', 'type'])
+        && meta.name is string
+        && meta.name.size() <= 120
+        && meta.size is int
+        && meta.size >= 0
+        && meta.size <= 10 * 1024 * 1024
+        && meta.type == 'application/pdf';
+    }
+
+    function validLibrary(lib) {
+      return lib is map
+        && lib.keys().hasOnly(['name', 'content'])
+        && lib.name is string
+        && lib.name.size() > 0
+        && lib.name.size() <= 120
+        && lib.name.matches('.*\\.py')
+        && lib.content is string
+        && lib.content.size() <= 102400;
+    }
+
+    function validLibraryItem(libraries, index) {
+      return libraries.size() <= index || validLibrary(libraries[index]);
+    }
+
+    function validLibraries(libraries) {
+      return libraries is list
+        && libraries.size() <= 10
+        && validLibraryItem(libraries, 0)
+        && validLibraryItem(libraries, 1)
+        && validLibraryItem(libraries, 2)
+        && validLibraryItem(libraries, 3)
+        && validLibraryItem(libraries, 4)
+        && validLibraryItem(libraries, 5)
+        && validLibraryItem(libraries, 6)
+        && validLibraryItem(libraries, 7)
+        && validLibraryItem(libraries, 8)
+        && validLibraryItem(libraries, 9);
+    }
+
+    function validStringItem(items, index, maxSize) {
+      return items.size() <= index || (items[index] is string && items[index].size() <= maxSize);
+    }
+
+    function validProjectStringList(items, maxItems, minItems, maxSize) {
+      return items is list
+        && items.size() >= minItems
+        && items.size() <= maxItems
+        && validStringItem(items, 0, maxSize)
+        && validStringItem(items, 1, maxSize)
+        && validStringItem(items, 2, maxSize)
+        && validStringItem(items, 3, maxSize)
+        && validStringItem(items, 4, maxSize)
+        && validStringItem(items, 5, maxSize)
+        && validStringItem(items, 6, maxSize)
+        && validStringItem(items, 7, maxSize)
+        && validStringItem(items, 8, maxSize)
+        && validStringItem(items, 9, maxSize);
+    }
+
+    function validOptionalVideoUrl(url) {
+      return url is string
+        && url.size() <= 1000
+        && (
+          url.size() == 0
+          || url.matches('https://(www\\.)?youtube\\.com/.*')
+          || url.matches('https://youtu\\.be/.*')
+          || url.matches('https://drive\\.google\\.com/.*')
+        );
+    }
+
+    function validOptionalGithubUrl(url) {
+      return url is string
+        && url.size() <= 1000
+        && (
+          url.size() == 0
+          || url.matches('https://(www\\.)?github\\.com/[^/]+/[^/]+.*')
+        );
+    }
+
+    function validProjectData(data) {
+      return data.keys().hasOnly([
+          'title', 'description', 'materials', 'videoURL', 'githubURL', 'imageURL', 'imagePath', 'imageMeta',
+          'lessonPdfURL', 'lessonPdfPath', 'lessonPdfMeta',
+          'authorId', 'authorName', 'authorPhoto', 'mainFile', 'libraries',
+          'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'title', 'description', 'materials', 'videoURL', 'githubURL', 'authorId', 'authorName',
+          'mainFile', 'libraries', 'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 100
+        && data.description is string
+        && data.description.size() > 0
+        && data.description.size() <= 2000
+        && data.materials is string
+        && data.materials.size() > 0
+        && data.materials.size() <= 2000
+        && data.authorName is string
+        && data.authorName.size() > 0
+        && data.authorName.size() <= 200
+        && validOptionalVideoUrl(data.videoURL)
+        && validOptionalGithubUrl(data.githubURL)
+        && (!('authorPhoto' in data) || data.authorPhoto is string && data.authorPhoto.size() <= 1000)
+        && (!('imageURL' in data) || data.imageURL is string && data.imageURL.size() <= 2000)
+        && (!('imagePath' in data) || data.imagePath is string && data.imagePath.size() <= 500)
+        && (!('imageMeta' in data) || data.imageMeta == null || validImageMeta(data.imageMeta))
+        && (!('lessonPdfURL' in data) || data.lessonPdfURL is string && data.lessonPdfURL.size() <= 2000)
+        && (!('lessonPdfPath' in data) || data.lessonPdfPath is string && data.lessonPdfPath.size() <= 500)
+        && (!('lessonPdfMeta' in data) || data.lessonPdfMeta == null || validLessonPdfMeta(data.lessonPdfMeta))
+        && data.mainFile is map
+        && data.mainFile.name is string
+        && data.mainFile.name.size() > 0
+        && data.mainFile.name.size() <= 120
+        && data.mainFile.name.matches('.*\\.py')
+        && data.mainFile.content is string
+        && data.mainFile.content.size() <= 102400
+        && validLibraries(data.libraries)
+        && validProjectStringList(data.pdfLinks, 5, 0, 1000)
+        && validProjectStringList(data.extraLinks, 5, 0, 1000)
+        && validProjectStringList(data.bnccCodes, 10, 1, 20)
+        && data.commentCount is int
+        && data.commentCount >= 0
+        && data.commentCount <= 500;
+    }
+
+    function validProjectUpdateData() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return validProjectData(request.resource.data)
+        && request.resource.data.authorId == resource.data.authorId
+        && request.resource.data.authorName == resource.data.authorName
+        && request.resource.data.authorPhoto == resource.data.authorPhoto
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.commentCount == resource.data.commentCount
+        && changed.hasOnly([
+          'title', 'description', 'materials', 'videoURL', 'githubURL',
+          'imageURL', 'imagePath', 'imageMeta',
+          'lessonPdfURL', 'lessonPdfPath', 'lessonPdfMeta',
+          'mainFile', 'libraries', 'pdfLinks', 'extraLinks', 'bnccCodes', 'updatedAt'
+        ]);
+    }
+
+    // Usuarios: leitura publica limitada; o proprio edita dados publicos; admin pode ajustar.
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if validListQuery(50);
+      allow create: if isOwner(userId) && validNewUserData(request.resource.data);
+      allow update: if (isOwner(userId) && validOwnerUserUpdate())
+                    || (isAdmin() && validUserPublicData(request.resource.data));
+      allow delete: if false;
+    }
+
+    // Projetos: leitura publica limitada; autor gerencia o proprio; admin gerencia qualquer projeto.
+    match /projects/{projectId} {
+      allow get: if true;
+      allow list: if validListQuery(50);
+      allow create: if isGoogleUser()
+                    && underProjectLimit()
+                    && request.resource.data.authorId == request.auth.uid;
+      allow update: if request.auth != null
+                    && (resource.data.authorId == request.auth.uid || isAdmin())
+                    && validProjectUpdateData();
+      allow delete: if request.auth != null
+                    && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

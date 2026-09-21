@@ -165,20 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const flashManager = new FlashManager(serial);
     window.flashManager = flashManager;
 
-    // Configura callbacks de progresso e status
-    flashManager.onProgress((percent) => {
-        if (window.onFlashProgress) {
-            window.onFlashProgress(percent);
-        }
-    });
-
+    // Configura callback de status
     flashManager.onStatus((message) => {
         // Status no terminal
         term.writeln(`\r\n\x1b[36m[Flash] ${message}\x1b[0m`);
-        
-        if (window.onFlashStatus) {
-            window.onFlashStatus(message);
-        }
     });
 
     // Global para flash.js

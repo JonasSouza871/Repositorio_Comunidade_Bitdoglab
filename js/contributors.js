@@ -10,6 +10,7 @@ async function loadContributors() {
     try {
         var snapshot = await db.collection('users')
             .orderBy('projectCount', 'desc')
+            .limit(50)
             .get();
 
         if (snapshot.empty) {
@@ -47,7 +48,9 @@ function createContributorCard(userId, userData, rank) {
     card.id = 'contributor-' + userId;
 
     var isOwner = auth.currentUser && auth.currentUser.uid === userId;
+    var safeUserId = escapeHtml(userId);
     var rankClass = rank <= 3 ? 'rank-' + rank : '';
+    var photoURL = sanitizeHttpUrl(userData.photoURL || '');
     var rankIcon = '';
     if (rank === 1) rankIcon = '🥇';
     else if (rank === 2) rankIcon = '🥈';
@@ -57,7 +60,7 @@ function createContributorCard(userId, userData, rank) {
     card.innerHTML =
         '<div class="contributor-rank ' + rankClass + '">' + rankIcon + '</div>' +
         '<div class="contributor-profile">' +
-            '<img src="' + (userData.photoURL || '') + '" class="contributor-avatar" alt="' + escapeHtml(userData.name) + '" onerror="this.style.display=\'none\'">' +
+            '<img src="' + escapeHtml(photoURL) + '" class="contributor-avatar" alt="' + escapeHtml(userData.name) + '" onerror="this.style.display=\'none\'">' +
             '<div class="contributor-info">' +
                 '<h3 class="contributor-name">' + escapeHtml(userData.name) + '</h3>' +
                 '<div class="contributor-stats">' +
@@ -69,7 +72,7 @@ function createContributorCard(userId, userData, rank) {
         '<div class="contributor-bio-section">' +
             '<div class="contributor-bio-wrapper" id="bio-wrapper-' + userId + '">' +
                 '<p class="contributor-bio" id="bio-' + userId + '">' + escapeHtml(userData.bio || 'Sem bio ainda.') + '</p>' +
-                (isOwner ? '<button class="btn-edit-bio" onclick="enableBioEdit(\'' + userId + '\')" title="Editar bio">' +
+                (isOwner ? '<button type="button" class="btn-edit-bio" data-contributor-action="edit-bio" data-user-id="' + safeUserId + '" title="Editar bio">' +
                     '<span class="material-icons">edit</span>' +
                 '</button>' : '') +
             '</div>' +
@@ -94,6 +97,7 @@ async function loadContributorProjects(userId) {
     try {
         var snapshot = await db.collection('projects')
             .where('authorId', '==', userId)
+            .limit(20)
             .get();
 
         if (snapshot.empty) {
@@ -106,7 +110,7 @@ async function loadContributorProjects(userId) {
             var project = doc.data();
             var item = document.createElement('div');
             item.className = 'contributor-project-item';
-            item.onclick = function() { openProjectDetail(doc.id); };
+            item.addEventListener('click', function() { openProjectDetail(doc.id); });
             item.innerHTML =
                 '<span class="material-icons">description</span>' +
                 '<span class="contributor-project-title">' + escapeHtml(project.title) + '</span>';
@@ -124,13 +128,14 @@ function enableBioEdit(userId) {
     var wrapper = document.getElementById('bio-wrapper-' + userId);
     var bioEl = document.getElementById('bio-' + userId);
     var currentBio = bioEl.textContent;
+    var safeUserId = escapeHtml(userId);
     if (currentBio === 'Sem bio ainda.') currentBio = '';
 
     wrapper.innerHTML =
         '<textarea class="bio-edit-input" id="bioEdit-' + userId + '" maxlength="200" rows="2" placeholder="Conte um pouco sobre você...">' + escapeHtml(currentBio) + '</textarea>' +
         '<div class="bio-edit-actions">' +
-            '<button class="btn btn-small btn-save" onclick="saveBioEdit(\'' + userId + '\')">Salvar</button>' +
-            '<button class="btn btn-small" onclick="loadContributors()">Cancelar</button>' +
+            '<button type="button" class="btn btn-small btn-save" data-contributor-action="save-bio" data-user-id="' + safeUserId + '">Salvar</button>' +
+            '<button type="button" class="btn btn-small" data-contributor-action="cancel-edit">Cancelar</button>' +
         '</div>';
 
     document.getElementById('bioEdit-' + userId).focus();
@@ -149,6 +154,7 @@ async function saveBioEdit(userId) {
     try {
         await db.collection('users').doc(userId).update({
             bio: newBio,
+            email: firebase.firestore.FieldValue.delete(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         loadContributors();
@@ -163,8 +169,8 @@ async function saveBioEdit(userId) {
 // ============================================
 
 function renderSocialLinks(userId, userData, isOwner) {
-    var linkedin = userData.linkedin || '';
-    var github = userData.github || '';
+    var linkedin = sanitizeSocialProfileUrl(userData.linkedin || '', 'linkedin');
+    var github = sanitizeSocialProfileUrl(userData.github || '', 'github');
     var hasLinks = linkedin || github;
 
     var html = '<div class="social-links">';
@@ -184,7 +190,7 @@ function renderSocialLinks(userId, userData, isOwner) {
     html += '</div>';
 
     if (isOwner) {
-        html += '<button class="btn-edit-socials" onclick="enableSocialsEdit(\'' + userId + '\')" title="Editar links">' +
+        html += '<button type="button" class="btn-edit-socials" data-contributor-action="edit-socials" data-user-id="' + escapeHtml(userId) + '" title="Editar links">' +
             '<span class="material-icons">edit</span>' +
         '</button>';
     }
@@ -198,6 +204,7 @@ function renderSocialLinks(userId, userData, isOwner) {
 
 function enableSocialsEdit(userId) {
     var wrapper = document.getElementById('socials-wrapper-' + userId);
+    var safeUserId = escapeHtml(userId);
 
     // Busca dados atuais do Firestore
     db.collection('users').doc(userId).get().then(function(doc) {
@@ -214,8 +221,8 @@ function enableSocialsEdit(userId) {
                     '<input type="url" class="social-edit-input" id="githubEdit-' + userId + '" placeholder="https://github.com/seu-usuario" value="' + escapeHtml(data.github || '') + '">' +
                 '</div>' +
                 '<div class="bio-edit-actions">' +
-                    '<button class="btn btn-small btn-save" onclick="saveSocialsEdit(\'' + userId + '\')">Salvar</button>' +
-                    '<button class="btn btn-small" onclick="loadContributors()">Cancelar</button>' +
+                    '<button type="button" class="btn btn-small btn-save" data-contributor-action="save-socials" data-user-id="' + safeUserId + '">Salvar</button>' +
+                    '<button type="button" class="btn btn-small" data-contributor-action="cancel-edit">Cancelar</button>' +
                 '</div>' +
             '</div>';
     });
@@ -226,11 +233,11 @@ async function saveSocialsEdit(userId) {
     var github = document.getElementById('githubEdit-' + userId).value.trim();
 
     // Validação básica
-    if (linkedin && !linkedin.includes('linkedin.com')) {
+    if (linkedin && !/^https:\/\/(www\.)?linkedin\.com\/in\/[^/\s]+\/?$/.test(linkedin)) {
         alert('Link do LinkedIn inválido.');
         return;
     }
-    if (github && !github.includes('github.com')) {
+    if (github && !/^https:\/\/(www\.)?github\.com\/[^/\s]+\/?$/.test(github)) {
         alert('Link do GitHub inválido.');
         return;
     }
@@ -239,6 +246,7 @@ async function saveSocialsEdit(userId) {
         await db.collection('users').doc(userId).update({
             linkedin: linkedin,
             github: github,
+            email: firebase.firestore.FieldValue.delete(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         loadContributors();
@@ -248,7 +256,34 @@ async function saveSocialsEdit(userId) {
     }
 }
 
+function handleContributorAction(event) {
+    var trigger = event.target.closest('[data-contributor-action]');
+    if (!trigger) return;
+
+    event.preventDefault();
+
+    var action = trigger.dataset.contributorAction;
+    var userId = trigger.dataset.userId;
+
+    if (action === 'edit-bio') {
+        enableBioEdit(userId);
+    } else if (action === 'save-bio') {
+        saveBioEdit(userId);
+    } else if (action === 'edit-socials') {
+        enableSocialsEdit(userId);
+    } else if (action === 'save-socials') {
+        saveSocialsEdit(userId);
+    } else if (action === 'cancel-edit') {
+        loadContributors();
+    }
+}
+
 // Carrega ao iniciar
 document.addEventListener('DOMContentLoaded', function() {
+    var grid = document.getElementById('contributorsGrid');
+    if (grid) {
+        grid.addEventListener('click', handleContributorAction);
+    }
+
     loadContributors();
 });
