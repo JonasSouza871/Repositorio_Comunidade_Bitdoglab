@@ -194,6 +194,9 @@ function displaySearchResults(results, query, isBNCCCode) {
     const grid = document.getElementById('projectsGrid');
     const searchInfo = document.getElementById('searchInfo');
     isSearchActive = true;
+    if (typeof updateProjectCategoryTabs === 'function') {
+        updateProjectCategoryTabs(true);
+    }
     
     // Limpa grid atual
     grid.innerHTML = '';
@@ -204,7 +207,7 @@ function displaySearchResults(results, query, isBNCCCode) {
             searchInfo.innerHTML = `<p class="search-empty">Nenhum projeto encontrado para "<strong>${escapeHtml(query)}</strong>"</p>`;
         } else {
             const typeLabel = isBNCCCode ? 'código/tag BNCC' : 'nome ou descrição';
-            searchInfo.innerHTML = `<p class="search-info">${results.length} projeto(s) encontrado(s) por ${typeLabel} "<strong>${escapeHtml(query)}</strong>"</p>`;
+            searchInfo.innerHTML = `<p class="search-info">${results.length} projeto(s) encontrado(s) em MicroPython e Blocos por ${typeLabel} "<strong>${escapeHtml(query)}</strong>"</p>`;
         }
     }
     
@@ -234,9 +237,14 @@ function clearSearch() {
     isSearchActive = false;
     const searchInput = document.getElementById('searchInput');
     const searchInfo = document.getElementById('searchInfo');
-    
+    const searchClear = document.querySelector('.search-clear');
+
     if (searchInput) searchInput.value = '';
     if (searchInfo) searchInfo.innerHTML = '';
+    if (searchClear) searchClear.style.display = 'none';
+    if (typeof updateProjectCategoryTabs === 'function') {
+        updateProjectCategoryTabs(false);
+    }
     
     // Recarrega todos os projetos
     loadProjects();
@@ -249,9 +257,15 @@ function clearSearchResults() {
     searchRequestId++;
     const searchInfo = document.getElementById('searchInfo');
     if (searchInfo) searchInfo.innerHTML = '';
+    if (typeof updateProjectCategoryTabs === 'function') {
+        updateProjectCategoryTabs(false);
+    }
 
     if (isSearchActive) {
         isSearchActive = false;
+        if (typeof updateProjectCategoryTabs === 'function') {
+            updateProjectCategoryTabs(false);
+        }
         loadProjects();
     }
 }

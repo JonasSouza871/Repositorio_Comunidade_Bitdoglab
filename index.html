@@ -95,7 +95,18 @@
                         </div>
                         <div id="searchInfo" class="search-info"></div>
                     </div>
-                    
+
+                    <div id="projectCategoryTabs" class="project-category-tabs" role="tablist" aria-label="Tipo de projeto">
+                        <button type="button" class="project-category-tab active" role="tab" aria-selected="true" aria-controls="projectsGrid" data-project-category="micropython">
+                            <span class="material-icons" aria-hidden="true">code</span>
+                            MicroPython
+                        </button>
+                        <button type="button" class="project-category-tab" role="tab" aria-selected="false" aria-controls="projectsGrid" data-project-category="bipes-bitdoglab">
+                            <span class="material-icons" aria-hidden="true">extension</span>
+                            Blocos
+                        </button>
+                    </div>
+
                     <div id="projectsGrid" class="projects-grid">
                         <p class="empty-message">Nenhum projeto ainda. Seja o primeiro a publicar!</p>
                     </div>

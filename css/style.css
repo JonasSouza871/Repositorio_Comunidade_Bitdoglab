@@ -1313,6 +1313,61 @@ html, body {
     box-shadow: 0 18px 45px rgba(45, 52, 54, 0.18);
 }
 
+.project-category-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: min(100%, 560px);
+    margin: -12px auto 26px;
+    padding: 5px;
+    border: 1px solid #E3E6EA;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.project-category-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 9px 18px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.project-category-tab:hover {
+    color: var(--color-dog);
+    background: #FFF0F7;
+}
+
+.project-category-tab:focus-visible {
+    outline: 3px solid rgba(233, 30, 140, 0.28);
+    outline-offset: 2px;
+}
+
+.project-category-tab.active {
+    color: #FFFFFF;
+    background: linear-gradient(135deg, var(--color-dog), var(--color-accent));
+    box-shadow: 0 5px 14px rgba(233, 30, 140, 0.24);
+}
+
+.project-category-tab .material-icons {
+    font-size: 20px;
+}
+
+.project-category-tabs.search-mode {
+    opacity: 0.72;
+}
+
 .project-type-badge {
     display: inline-flex;
     align-items: center;
@@ -1329,6 +1384,16 @@ html, body {
 
 .project-type-badge .material-icons {
     font-size: 15px;
+}
+
+.project-type-badge-micropython {
+    background: #F1ECFF;
+    color: #6842A8;
+}
+
+.project-type-badge-blocks {
+    background: #E8F2FF;
+    color: #2457A7;
 }
 
 .bncc-suggestions.active {
