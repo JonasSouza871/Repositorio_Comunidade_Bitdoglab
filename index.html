@@ -166,6 +166,11 @@
                 </button>
             </div>
             <div class="modal-form">
+                <div id="editBipesProjectType" class="project-type-summary" hidden>
+                    <span class="material-icons">extension</span>
+                    BIPES BitDogLab
+                </div>
+
                 <label class="form-label" for="editProjectTitle">Nome do Projeto *</label>
                 <input type="text" id="editProjectTitle" class="form-input" maxlength="100">
 
@@ -175,9 +180,11 @@
                 <label class="form-label" for="editProjectDescription">Descrição *</label>
                 <textarea id="editProjectDescription" class="form-textarea" rows="4"></textarea>
 
-                <label class="form-label" for="editProjectMaterials">Materiais Utilizados *</label>
-                <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho.</p>
-                <textarea id="editProjectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+                <div id="editProjectMaterialsFields">
+                    <label class="form-label" for="editProjectMaterials">Materiais Utilizados *</label>
+                    <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho.</p>
+                    <textarea id="editProjectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+                </div>
 
                 <label class="form-label" for="editProjectVideo">Link do Vídeo <span class="form-hint">(YouTube ou Google Drive; opcional)</span></label>
                 <input type="url" id="editProjectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
@@ -185,11 +192,57 @@
                 <label class="form-label" for="editProjectGithub">Link do GitHub <span class="form-hint">(opcional)</span></label>
                 <input type="url" id="editProjectGithub" class="form-input" placeholder="https://github.com/usuario/repositorio">
 
-                <label class="form-label">Substituir Main.py <span class="form-hint">(deixe vazio para manter o atual)</span></label>
-                <input type="file" id="editMainFile" class="form-file" accept=".py">
+                <div id="editMicroPythonFields">
+                    <label class="form-label">Substituir Main.py <span class="form-hint">(deixe vazio para manter o atual)</span></label>
+                    <input type="file" id="editMainFile" class="form-file" accept=".py">
 
-                <label class="form-label">Substituir Bibliotecas <span class="form-hint">(deixe vazio para manter as atuais)</span></label>
-                <input type="file" id="editLibraries" class="form-file" accept=".py" multiple>
+                    <label class="form-label">Substituir Bibliotecas <span class="form-hint">(deixe vazio para manter as atuais)</span></label>
+                    <input type="file" id="editLibraries" class="form-file" accept=".py" multiple>
+                </div>
+
+                <div id="editBipesFields" hidden>
+                    <label class="form-label">Imagem do Projeto * <span class="form-hint">(captura mostrando os blocos; deixe vazio para manter)</span></label>
+                    <input type="file" id="editBipesProjectImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
+
+                    <label class="form-label">Substituir arquivo do BIPES BitDogLab <span class="form-hint">(XML; deixe vazio para manter)</span></label>
+                    <input type="file" id="editBlockXml" class="form-file" accept="application/xml,text/xml,.xml">
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Versão da BitDogLab *</legend>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="checkbox" name="editBoardVersion" value="v6"><span>BitDogLab V6</span></label>
+                            <label class="choice-chip"><input type="checkbox" name="editBoardVersion" value="v7"><span>BitDogLab V7</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Modo utilizado no BIPES BitDogLab *</legend>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="radio" name="editBipesMode" value="basic"><span>Básico</span></label>
+                            <label class="choice-chip"><input type="radio" name="editBipesMode" value="robot"><span>Robô móvel</span></label>
+                            <label class="choice-chip"><input type="radio" name="editBipesMode" value="greenhouse"><span>Estufa</span></label>
+                            <label class="choice-chip"><input type="radio" name="editBipesMode" value="piano"><span>Piano musical</span></label>
+                            <label class="choice-chip"><input type="radio" name="editBipesMode" value="other"><span>Outro</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Dificuldade <span class="form-hint">(opcional)</span></legend>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="radio" name="editDifficulty" value="beginner"><span>Iniciante</span></label>
+                            <label class="choice-chip"><input type="radio" name="editDifficulty" value="intermediate"><span>Intermediário</span></label>
+                            <label class="choice-chip"><input type="radio" name="editDifficulty" value="advanced"><span>Avançado</span></label>
+                        </div>
+                    </fieldset>
+
+                    <label class="form-label" for="editProjectObservations">Observações para montagem <span class="form-hint">(opcional)</span></label>
+                    <textarea id="editProjectObservations" class="form-textarea" maxlength="1000" rows="3"></textarea>
+
+                    <label class="remix-consent">
+                        <input type="checkbox" id="editAllowRemix">
+                        <span>Autorizo que este projeto seja visualizado, baixado e remixado pela comunidade.</span>
+                    </label>
+                </div>
 
                 <label class="form-label">Plano de aula e estudo dirigido <span class="form-hint">(PDF único; deixe vazio para manter)</span></label>
                 <input type="file" id="editLessonPdf" class="form-file" accept="application/pdf,.pdf">
@@ -238,18 +291,38 @@
             </div>
             <p class="modal-subtitle">Preencha os campos obrigatórios para publicar seu projeto.</p>
             <div class="modal-form">
+                <fieldset class="project-type-fieldset">
+                    <legend class="form-label">Como seu projeto foi criado? *</legend>
+                    <div class="project-type-grid">
+                        <label class="project-type-card">
+                            <input type="radio" name="projectType" value="micropython" checked>
+                            <span class="material-icons">code</span>
+                            <strong>MicroPython</strong>
+                            <small>Publique o main.py e suas bibliotecas.</small>
+                        </label>
+                        <label class="project-type-card">
+                            <input type="radio" name="projectType" value="bipes-bitdoglab">
+                            <span class="material-icons">extension</span>
+                            <strong>BIPES BitDogLab</strong>
+                            <small>Publique o XML criado com blocos.</small>
+                        </label>
+                    </div>
+                </fieldset>
+
                 <label class="form-label" for="projectTitle">Nome do Projeto *</label>
                 <input type="text" id="projectTitle" class="form-input" placeholder="Ex: Semáforo com LEDs RGB" maxlength="100">
 
-                <label class="form-label">Imagem de Capa <span class="form-hint">(apenas 1 imagem; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
+                <label class="form-label">Imagem de Capa <span id="projectImageHint" class="form-hint">(apenas 1 imagem; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
                 <input type="file" id="projectImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
 
                 <label class="form-label" for="projectDescription">Descrição *</label>
                 <textarea id="projectDescription" class="form-textarea" placeholder="Explique o que seu projeto faz, como funciona..." rows="4"></textarea>
 
-                <label class="form-label" for="projectMaterials">Materiais Utilizados *</label>
-                <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho. Isso ajuda outras pessoas a reproduzirem o projeto.</p>
-                <textarea id="projectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+                <div id="projectMaterialsFields">
+                    <label class="form-label" for="projectMaterials">Materiais Utilizados *</label>
+                    <p class="form-warning">Coloque um item por linha no formato quantidade + componente. Ex: 2x LED vermelho, 1x BitDogLab, 4x jumper macho-macho. Isso ajuda outras pessoas a reproduzirem o projeto.</p>
+                    <textarea id="projectMaterials" class="form-textarea" placeholder="2x LED vermelho&#10;1x BitDogLab&#10;4x jumper macho-macho" rows="5"></textarea>
+                </div>
 
                 <label class="form-label" for="projectVideo">Link do Vídeo <span class="form-hint">(YouTube ou Google Drive; opcional)</span></label>
                 <input type="url" id="projectVideo" class="form-input" placeholder="https://youtube.com/watch?v=...">
@@ -257,13 +330,60 @@
                 <label class="form-label" for="projectGithub">Link do GitHub <span class="form-hint">(opcional)</span></label>
                 <input type="url" id="projectGithub" class="form-input" placeholder="https://github.com/usuario/repositorio">
 
-                <label class="form-label">Main.py - Script principal * <span class="form-hint">(máx. 100KB)</span></label>
-                <input type="file" id="projectMainFile" class="form-file" accept=".py">
+                <div id="microPythonProjectFields">
+                    <label class="form-label">Main.py - Script principal * <span class="form-hint">(máx. 100KB)</span></label>
+                    <input type="file" id="projectMainFile" class="form-file" accept=".py">
 
-                <label class="form-label">Bibliotecas (.py) <span class="form-hint">(máx. 10 arquivos, 100KB cada)</span></label>
-                <input type="file" id="projectLibraries" class="form-file" accept=".py" multiple>
+                    <label class="form-label">Bibliotecas (.py) <span class="form-hint">(máx. 5 arquivos, 100KB cada)</span></label>
+                    <input type="file" id="projectLibraries" class="form-file" accept=".py" multiple>
+                </div>
 
-                <label class="form-label">Plano de aula e estudo dirigido * <span class="form-hint">(PDF único; máx. 10MB)</span></label>
+                <div id="bipesProjectFields" hidden>
+                    <label class="form-label">Imagem do Projeto * <span class="form-hint">(captura mostrando os blocos; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
+                    <input type="file" id="projectBipesImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
+
+                    <label class="form-label">Arquivo do BIPES BitDogLab * <span class="form-hint">(XML exportado pela plataforma; máx. 500KB)</span></label>
+                    <input type="file" id="projectBlockXml" class="form-file" accept="application/xml,text/xml,.xml">
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Versão da BitDogLab *</legend>
+                        <p class="form-hint choice-help">Marque as duas opções se o projeto funcionar em ambas.</p>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="checkbox" name="projectBoardVersion" value="v6"><span>BitDogLab V6</span></label>
+                            <label class="choice-chip"><input type="checkbox" name="projectBoardVersion" value="v7"><span>BitDogLab V7</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Modo utilizado no BIPES BitDogLab *</legend>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="radio" name="projectBipesMode" value="basic"><span>Básico</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectBipesMode" value="robot"><span>Robô móvel</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectBipesMode" value="greenhouse"><span>Estufa</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectBipesMode" value="piano"><span>Piano musical</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectBipesMode" value="other"><span>Outro</span></label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="choice-fieldset">
+                        <legend class="form-label">Dificuldade <span class="form-hint">(opcional)</span></legend>
+                        <div class="compact-choice-grid">
+                            <label class="choice-chip"><input type="radio" name="projectDifficulty" value="beginner"><span>Iniciante</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectDifficulty" value="intermediate"><span>Intermediário</span></label>
+                            <label class="choice-chip"><input type="radio" name="projectDifficulty" value="advanced"><span>Avançado</span></label>
+                        </div>
+                    </fieldset>
+
+                    <label class="form-label" for="projectObservations">Observações para montagem <span class="form-hint">(opcional)</span></label>
+                    <textarea id="projectObservations" class="form-textarea" maxlength="1000" placeholder="Inclua cuidados, conexões ou orientações adicionais." rows="3"></textarea>
+
+                    <label class="remix-consent">
+                        <input type="checkbox" id="projectAllowRemix">
+                        <span>Autorizo que este projeto seja visualizado, baixado e remixado pela comunidade. *</span>
+                    </label>
+                </div>
+
+                <label class="form-label">Plano de aula e estudo dirigido <span id="projectLessonRequirement">*</span> <span id="projectLessonHint" class="form-hint">(PDF único; máx. 10MB)</span></label>
                 <p class="form-warning">Formato livre, mas deve conter roteiro de aula, objetivos, materiais necessários, modo de uso e linguagem voltada a professores e estudantes do ensino fundamental ou médio.</p>
                 <input type="file" id="projectLessonPdf" class="form-file" accept="application/pdf,.pdf">
 

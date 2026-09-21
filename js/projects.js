@@ -3,7 +3,7 @@
  * Comunidade BitDogLab
  *
  * Arquivos .py → conteúdo salvo como texto no Firestore
- * PDF pedagógico/imagens → Firebase Storage
+ * PDF pedagógico, imagens e XML do BIPES BitDogLab → Firebase Storage
  */
 
 // Limites de tamanho
@@ -17,16 +17,36 @@ const LIMITS = {
     MATERIALS_MAX_CHARS: 2000,    // Lista de materiais max 2000 caracteres
     COVER_IMAGE_MAX_MB: 2,        // Imagem de capa max 2MB
     LESSON_PDF_MAX_MB: 10,        // Plano de aula/estudo dirigido max 10MB
+    BLOCK_XML_MAX_KB: 500,        // Workspace do BIPES BitDogLab
     MAX_PROJECTS_PER_USER: 20     // Limite prático por usuário
 };
 
 const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const SAFE_PYTHON_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,116}\.py$/;
+const BIPES_PROJECT_TYPE = 'bipes-bitdoglab';
 
 function isSafePythonFilename(name) {
     return typeof name === 'string'
         && name.length <= 120
         && SAFE_PYTHON_FILENAME_PATTERN.test(name);
+}
+
+function getSelectedProjectType() {
+    return document.querySelector('input[name="projectType"]:checked')?.value || 'micropython';
+}
+
+function updateProjectTypeFields() {
+    const isBipes = getSelectedProjectType() === BIPES_PROJECT_TYPE;
+    document.getElementById('microPythonProjectFields').hidden = isBipes;
+    document.getElementById('bipesProjectFields').hidden = !isBipes;
+    document.getElementById('projectMaterialsFields').hidden = isBipes;
+    document.getElementById('projectImageHint').textContent = isBipes
+        ? '(obrigatória; JPG, PNG, WEBP ou GIF; máx. 2MB)'
+        : '(apenas 1 imagem; JPG, PNG, WEBP ou GIF; máx. 2MB)';
+    document.getElementById('projectLessonRequirement').textContent = isBipes ? '' : '*';
+    document.getElementById('projectLessonHint').textContent = isBipes
+        ? '(opcional; PDF único; máx. 10MB)'
+        : '(PDF único; máx. 10MB)';
 }
 
 // Estado das tags BNCC por modal
@@ -52,6 +72,7 @@ async function openProjectModal() {
         return;
     }
     document.getElementById('projectModal').classList.add('active');
+    updateProjectTypeFields();
     initBnccTagInput('project');
 }
 
@@ -72,9 +93,18 @@ function clearProjectForm() {
     document.getElementById('projectLibraries').value = '';
     document.getElementById('projectLessonPdf').value = '';
     document.getElementById('projectImage').value = '';
+    document.getElementById('projectBipesImage').value = '';
+    document.getElementById('projectBlockXml').value = '';
+    document.getElementById('projectObservations').value = '';
+    document.getElementById('projectAllowRemix').checked = false;
+    document.querySelector('input[name="projectType"][value="micropython"]').checked = true;
+    document.querySelectorAll('input[name="projectBoardVersion"], input[name="projectBipesMode"], input[name="projectDifficulty"]').forEach(input => {
+        input.checked = false;
+    });
     document.getElementById('uploadProgress').style.display = 'none';
     bnccTagState.project = [];
     renderBnccTags('project');
+    updateProjectTypeFields();
 }
 
 // Lê arquivo .py como texto
@@ -109,6 +139,14 @@ function validateCoverImage(file) {
     }
 }
 
+function validateBipesProjectImage(file) {
+    try {
+        validateCoverImage(file);
+    } catch (error) {
+        throw new Error(error.message.replace('imagem de capa', 'imagem do projeto').replace('Imagem muito grande', 'Imagem do projeto muito grande'));
+    }
+}
+
 // Valida PDF pedagógico
 function validateLessonPdf(file) {
     if (!file) return;
@@ -121,6 +159,24 @@ function validateLessonPdf(file) {
     const sizeMB = file.size / (1024 * 1024);
     if (sizeMB > LIMITS.LESSON_PDF_MAX_MB) {
         throw new Error(`PDF muito grande. Máximo: ${LIMITS.LESSON_PDF_MAX_MB}MB.`);
+    }
+}
+
+function validateBlockXml(file, content) {
+    if (!file || !file.name.toLowerCase().endsWith('.xml')) {
+        throw new Error('Envie o arquivo XML exportado pelo BIPES BitDogLab.');
+    }
+    if (file.name.length > 120) {
+        throw new Error('O nome do arquivo XML deve ter no máximo 120 caracteres.');
+    }
+    validateFileSize(file, LIMITS.BLOCK_XML_MAX_KB);
+    if (/<!DOCTYPE|<!ENTITY/i.test(content)) {
+        throw new Error('O XML contém uma declaração não permitida. Exporte novamente pelo BIPES BitDogLab.');
+    }
+
+    const parsed = new DOMParser().parseFromString(content, 'application/xml');
+    if (parsed.querySelector('parsererror') || parsed.documentElement.localName.toLowerCase() !== 'xml') {
+        throw new Error('O arquivo não contém um projeto XML válido do BIPES BitDogLab.');
     }
 }
 
@@ -187,6 +243,35 @@ async function deleteLessonPdf(lessonPdfPath) {
     }
 }
 
+async function uploadBlockXml(file, content, userId, projectId) {
+    const blockFilePath = `project-blocks/${userId}/${projectId}/workspace.xml`;
+    const ref = storage.ref().child(blockFilePath);
+    const snapshot = await ref.put(new Blob([content], { type: 'application/xml' }), {
+        contentType: 'application/xml',
+        contentDisposition: 'attachment; filename="workspace.bipes.xml"',
+        customMetadata: { originalName: file.name }
+    });
+
+    return {
+        blockFileURL: await snapshot.ref.getDownloadURL(),
+        blockFilePath: blockFilePath,
+        blockFileMeta: {
+            name: file.name,
+            size: file.size,
+            type: 'application/xml'
+        }
+    };
+}
+
+async function deleteBlockXml(blockFilePath) {
+    if (!blockFilePath || typeof storage === 'undefined') return;
+    try {
+        await storage.ref().child(blockFilePath).delete();
+    } catch (error) {
+        console.warn('Não foi possível remover o XML do BIPES BitDogLab:', error);
+    }
+}
+
 // Faz upload da imagem de capa para o Firebase Storage
 async function uploadProjectCover(file, userId, projectId) {
     if (!file) return { imageURL: '', imagePath: '', imageMeta: null };
@@ -225,6 +310,42 @@ async function deleteProjectCover(imagePath) {
         await storage.ref().child(imagePath).delete();
     } catch (error) {
         console.warn('Não foi possível remover a capa do Storage:', error);
+    }
+}
+
+async function uploadBipesProjectImage(file, userId, projectId) {
+    if (!file) return { projectImageURL: '', projectImagePath: '', projectImageMeta: null };
+    if (typeof storage === 'undefined') {
+        throw new Error('Firebase Storage não foi inicializado.');
+    }
+
+    validateBipesProjectImage(file);
+
+    const projectImagePath = `project-images/${userId}/${projectId}/project-image`;
+    const ref = storage.ref().child(projectImagePath);
+    const snapshot = await ref.put(file, {
+        contentType: file.type,
+        customMetadata: { originalName: file.name }
+    });
+
+    return {
+        projectImageURL: await snapshot.ref.getDownloadURL(),
+        projectImagePath: projectImagePath,
+        projectImageMeta: {
+            name: file.name,
+            size: file.size,
+            type: file.type
+        }
+    };
+}
+
+async function deleteBipesProjectImage(projectImagePath) {
+    if (!projectImagePath || typeof storage === 'undefined') return;
+
+    try {
+        await storage.ref().child(projectImagePath).delete();
+    } catch (error) {
+        console.warn('Não foi possível remover a imagem do projeto do Storage:', error);
     }
 }
 
@@ -298,11 +419,23 @@ async function publishProject() {
     // Coleta dados do formulário
     const title = document.getElementById('projectTitle').value.trim();
     const description = document.getElementById('projectDescription').value.trim();
-    const materials = normalizeMaterialsInput(document.getElementById('projectMaterials').value);
+    const enteredMaterials = normalizeMaterialsInput(document.getElementById('projectMaterials').value);
     const videoURL = document.getElementById('projectVideo').value.trim();
     const githubURL = document.getElementById('projectGithub').value.trim();
+    const projectType = getSelectedProjectType();
+    const isBipesProject = projectType === BIPES_PROJECT_TYPE;
+    const materials = isBipesProject ? '' : enteredMaterials;
     const mainFileInput = document.getElementById('projectMainFile');
     const librariesInput = document.getElementById('projectLibraries');
+    const blockXmlInput = document.getElementById('projectBlockXml');
+    const blockXmlFile = blockXmlInput.files[0] || null;
+    const bipesProjectImageInput = document.getElementById('projectBipesImage');
+    const bipesProjectImageFile = bipesProjectImageInput.files[0] || null;
+    const boardVersions = Array.from(document.querySelectorAll('input[name="projectBoardVersion"]:checked')).map(input => input.value);
+    const bipesMode = document.querySelector('input[name="projectBipesMode"]:checked')?.value || '';
+    const difficulty = document.querySelector('input[name="projectDifficulty"]:checked')?.value || '';
+    const observations = document.getElementById('projectObservations').value.trim();
+    const allowRemix = document.getElementById('projectAllowRemix').checked;
     const lessonPdfInput = document.getElementById('projectLessonPdf');
     const lessonPdfFile = lessonPdfInput.files[0] || null;
     const coverInput = document.getElementById('projectImage');
@@ -313,20 +446,31 @@ async function publishProject() {
     if (title.length > LIMITS.TITLE_MAX_CHARS) return alert(`Título muito longo. Máximo: ${LIMITS.TITLE_MAX_CHARS} caracteres.`);
     if (!description) return alert('Preencha a descrição.');
     if (description.length > LIMITS.DESCRIPTION_MAX_CHARS) return alert(`Descrição muito longa. Máximo: ${LIMITS.DESCRIPTION_MAX_CHARS} caracteres.`);
-    try {
-        validateMaterialsList(materials);
-    } catch (e) {
-        return alert(e.message);
+    if (!isBipesProject) {
+        try {
+            validateMaterialsList(materials);
+        } catch (e) {
+            return alert(e.message);
+        }
     }
-    if (!mainFileInput.files[0]) return alert('Envie o arquivo Main.py.');
-    if (!lessonPdfFile) return alert('Envie o PDF com plano de aula e estudo dirigido.');
+    if (!isBipesProject && !mainFileInput.files[0]) return alert('Envie o arquivo Main.py.');
+    if (!isBipesProject && !lessonPdfFile) return alert('Envie o PDF com plano de aula e estudo dirigido.');
+    if (isBipesProject && !coverFile) return alert('Envie uma imagem de capa para o projeto.');
+    if (isBipesProject && !bipesProjectImageFile) return alert('Envie uma imagem do projeto mostrando os blocos.');
+    if (isBipesProject && !blockXmlFile) return alert('Envie o arquivo XML exportado pelo BIPES BitDogLab.');
+    if (isBipesProject && boardVersions.length === 0) return alert('Marque pelo menos uma versão da BitDogLab.');
+    if (isBipesProject && !bipesMode) return alert('Marque o modo utilizado no BIPES BitDogLab.');
+    if (isBipesProject && !allowRemix) return alert('Confirme a autorização para compartilhar e remixar o projeto.');
+    if (observations.length > 1000) return alert('As observações devem ter no máximo 1000 caracteres.');
     if (bnccTagState.project.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
     if (bnccTagState.project.length > LIMITS.MAX_BNCC_CODES) return alert(`Selecione no máximo ${LIMITS.MAX_BNCC_CODES} códigos BNCC por projeto.`);
     if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
+    if (bipesProjectImageInput.files.length > 1) return alert('Envie apenas uma imagem do projeto.');
     if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
 
     try {
         validateCoverImage(coverFile);
+        if (isBipesProject) validateBipesProjectImage(bipesProjectImageFile);
     } catch (e) {
         return alert(e.message);
     }
@@ -346,28 +490,37 @@ async function publishProject() {
         return alert(e.message);
     }
 
-    // Validação do Main.py
-    const mainFile = mainFileInput.files[0];
-    if (!isSafePythonFilename(mainFile.name)) {
-        return alert('O arquivo principal deve usar apenas letras, números, _ ou - e terminar em .py');
-    }
-    try {
-        validateFileSize(mainFile, LIMITS.MAIN_FILE_MAX_KB);
-    } catch (e) {
-        return alert(e.message);
-    }
+    const mainFile = isBipesProject ? null : mainFileInput.files[0];
+    const libFiles = isBipesProject ? [] : Array.from(librariesInput.files || []);
+    let blockXmlContent = '';
 
-    // Validação das bibliotecas
-    const libFiles = Array.from(librariesInput.files || []);
-    if (libFiles.length > LIMITS.MAX_LIBRARIES) {
-        return alert(`Máximo de ${LIMITS.MAX_LIBRARIES} bibliotecas.`);
-    }
-    for (const file of libFiles) {
-        if (!isSafePythonFilename(file.name)) {
-            return alert(`${file.name} possui um nome inválido. Use apenas letras, números, _ ou - e termine em .py`);
+    if (!isBipesProject) {
+        if (!isSafePythonFilename(mainFile.name)) {
+            return alert('O arquivo principal deve usar apenas letras, números, _ ou - e terminar em .py');
         }
         try {
-            validateFileSize(file, LIMITS.LIB_FILE_MAX_KB);
+            validateFileSize(mainFile, LIMITS.MAIN_FILE_MAX_KB);
+        } catch (e) {
+            return alert(e.message);
+        }
+
+        if (libFiles.length > LIMITS.MAX_LIBRARIES) {
+            return alert(`Máximo de ${LIMITS.MAX_LIBRARIES} bibliotecas.`);
+        }
+        for (const file of libFiles) {
+            if (!isSafePythonFilename(file.name)) {
+                return alert(`${file.name} possui um nome inválido. Use apenas letras, números, _ ou - e termine em .py`);
+            }
+            try {
+                validateFileSize(file, LIMITS.LIB_FILE_MAX_KB);
+            } catch (e) {
+                return alert(e.message);
+            }
+        }
+    } else {
+        try {
+            blockXmlContent = await readFileAsText(blockXmlFile);
+            validateBlockXml(blockXmlFile, blockXmlContent);
         } catch (e) {
             return alert(e.message);
         }
@@ -405,16 +558,18 @@ async function publishProject() {
 
     let currentStep = 'iniciar publicação';
     let coverUpload = null;
+    let projectImageUpload = null;
     let lessonUpload = null;
+    let blockUpload = null;
     let projectSaved = false;
     let counterUpdated = false;
     let projectId = null;
 
     try {
-        // Lê Main.py
+        // Lê os arquivos MicroPython quando esse for o tipo selecionado
         progressFill.style.width = '20%';
-        progressText.textContent = 'Lendo Main.py...';
-        const mainContent = await readFileAsText(mainFile);
+        progressText.textContent = isBipesProject ? 'Preparando XML do BIPES BitDogLab...' : 'Lendo Main.py...';
+        const mainContent = isBipesProject ? '' : await readFileAsText(mainFile);
 
         // Lê bibliotecas
         const libraries = [];
@@ -440,17 +595,29 @@ async function publishProject() {
             materials: materials,
             videoURL: videoURL,
             githubURL: githubURL,
+            projectType: projectType,
             imageURL: '',
             imagePath: '',
             imageMeta: null,
+            projectImageURL: '',
+            projectImagePath: '',
+            projectImageMeta: null,
             lessonPdfURL: '',
             lessonPdfPath: '',
             lessonPdfMeta: null,
             authorId: user.uid,
             authorName: userData.name || user.displayName,
             authorPhoto: userData.photoURL || user.photoURL || '',
-            mainFile: { name: mainFile.name, content: mainContent },
+            mainFile: isBipesProject ? null : { name: mainFile.name, content: mainContent },
             libraries: libraries,
+            blockFileURL: '',
+            blockFilePath: '',
+            blockFileMeta: null,
+            boardVersions: isBipesProject ? boardVersions : [],
+            bipesMode: isBipesProject ? bipesMode : '',
+            difficulty: isBipesProject ? difficulty : '',
+            observations: isBipesProject ? observations : '',
+            allowRemix: isBipesProject && allowRemix,
             pdfLinks: [],
             extraLinks: [],
             bnccCodes: bnccTagState.project.slice(),
@@ -478,6 +645,12 @@ async function publishProject() {
         progressText.textContent = 'Enviando arquivos...';
         currentStep = 'upload da imagem de capa';
         coverUpload = await uploadProjectCover(coverFile, user.uid, projectId);
+        if (isBipesProject) {
+            currentStep = 'upload da imagem do projeto';
+            projectImageUpload = await uploadBipesProjectImage(bipesProjectImageFile, user.uid, projectId);
+            currentStep = 'upload do XML do BIPES BitDogLab';
+            blockUpload = await uploadBlockXml(blockXmlFile, blockXmlContent, user.uid, projectId);
+        }
         currentStep = 'upload do PDF pedagógico';
         lessonUpload = await uploadLessonPdf(lessonPdfFile, user.uid, projectId);
 
@@ -486,9 +659,15 @@ async function publishProject() {
             imageURL: coverUpload.imageURL,
             imagePath: coverUpload.imagePath,
             imageMeta: coverUpload.imageMeta,
+            projectImageURL: projectImageUpload ? projectImageUpload.projectImageURL : '',
+            projectImagePath: projectImageUpload ? projectImageUpload.projectImagePath : '',
+            projectImageMeta: projectImageUpload ? projectImageUpload.projectImageMeta : null,
             lessonPdfURL: lessonUpload.lessonPdfURL,
             lessonPdfPath: lessonUpload.lessonPdfPath,
             lessonPdfMeta: lessonUpload.lessonPdfMeta,
+            blockFileURL: blockUpload ? blockUpload.blockFileURL : '',
+            blockFilePath: blockUpload ? blockUpload.blockFilePath : '',
+            blockFileMeta: blockUpload ? blockUpload.blockFileMeta : null,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
@@ -504,8 +683,14 @@ async function publishProject() {
         if (coverUpload && coverUpload.imagePath) {
             await deleteProjectCover(coverUpload.imagePath);
         }
+        if (projectImageUpload && projectImageUpload.projectImagePath) {
+            await deleteBipesProjectImage(projectImageUpload.projectImagePath);
+        }
         if (lessonUpload && lessonUpload.lessonPdfPath) {
             await deleteLessonPdf(lessonUpload.lessonPdfPath);
+        }
+        if (blockUpload && blockUpload.blockFilePath) {
+            await deleteBlockXml(blockUpload.blockFilePath);
         }
         if (projectSaved && projectId) {
             try {
@@ -733,6 +918,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (publishBtn) {
         publishBtn.addEventListener('click', publishProject);
     }
+
+    document.querySelectorAll('input[name="projectType"]').forEach(input => {
+        input.addEventListener('change', updateProjectTypeFields);
+    });
     
     // Modal de Edição de Projeto
     const editProjectModalClose = document.querySelector('#editProjectModal .modal-close');

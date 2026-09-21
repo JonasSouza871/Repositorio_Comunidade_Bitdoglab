@@ -228,6 +228,57 @@ service cloud.firestore {
       return items is list && items.size() == 0;
     }
 
+    function validBlockFileMeta(meta) {
+      return meta is map
+        && meta.keys().hasOnly(['name', 'size', 'type'])
+        && meta.name is string
+        && meta.name.size() > 4
+        && meta.name.size() <= 120
+        && meta.name.matches('.*\\.[xX][mM][lL]')
+        && meta.size is int
+        && meta.size > 0
+        && meta.size <= 500 * 1024
+        && meta.type == 'application/xml';
+    }
+
+    function validBoardVersions(versions) {
+      return versions is list
+        && versions.size() >= 1
+        && versions.size() <= 2
+        && (versions[0] == 'v6' || versions[0] == 'v7')
+        && (versions.size() == 1 || versions[1] == 'v6' || versions[1] == 'v7');
+    }
+
+    function validMicroPythonPayload(data) {
+      return data.get('projectType', 'micropython') == 'micropython'
+        && data.mainFile is map
+        && data.mainFile.keys().hasOnly(['name', 'content'])
+        && validPythonFilename(data.mainFile.name)
+        && data.mainFile.content is string
+        && data.mainFile.content.size() <= 102400
+        && validLibraries(data.libraries);
+    }
+
+    function validBipesPayload(data, projectId) {
+      return data.projectType == 'bipes-bitdoglab'
+        && data.materials.size() == 0
+        && data.mainFile == null
+        && validEmptyList(data.libraries)
+        && data.blockFileURL is string
+        && data.blockFileURL.size() <= 2000
+        && data.blockFilePath is string
+        && (data.blockFilePath.size() == 0 || data.blockFilePath == 'project-blocks/' + data.authorId + '/' + projectId + '/workspace.xml')
+        && (data.blockFileMeta == null || validBlockFileMeta(data.blockFileMeta))
+        && validBoardVersions(data.boardVersions)
+        && data.bipesMode is string
+        && data.bipesMode.matches('(basic|robot|greenhouse|piano|other)')
+        && data.difficulty is string
+        && data.difficulty.matches('(|beginner|intermediate|advanced)')
+        && data.observations is string
+        && data.observations.size() <= 1000
+        && data.allowRemix == true;
+    }
+
     function validOptionalVideoUrl(url) {
       return url is string
         && url.size() <= 1000
@@ -251,9 +302,12 @@ service cloud.firestore {
     function validProjectData(data, projectId) {
       return data.keys().hasOnly([
           'title', 'description', 'materials', 'videoURL', 'githubURL', 'imageURL', 'imagePath', 'imageMeta',
+          'projectImageURL', 'projectImagePath', 'projectImageMeta',
           'lessonPdfURL', 'lessonPdfPath', 'lessonPdfMeta',
           'authorId', 'authorName', 'authorPhoto', 'mainFile', 'libraries',
-          'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount', 'createdAt', 'updatedAt'
+          'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount', 'createdAt', 'updatedAt',
+          'projectType', 'blockFileURL', 'blockFilePath', 'blockFileMeta',
+          'boardVersions', 'bipesMode', 'difficulty', 'observations', 'allowRemix'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -262,8 +316,8 @@ service cloud.firestore {
         && data.description.size() > 0
         && data.description.size() <= 2000
         && data.materials is string
-        && data.materials.size() > 0
         && data.materials.size() <= 2000
+        && (data.get('projectType', 'micropython') == 'bipes-bitdoglab' || data.materials.size() > 0)
         && data.authorId is string
         && data.authorId.size() > 0
         && data.authorId.size() <= 128
@@ -279,18 +333,19 @@ service cloud.firestore {
           && (data.imagePath.size() == 0 || data.imagePath == 'project-covers/' + data.authorId + '/' + projectId + '/cover')
         ))
         && (!('imageMeta' in data) || data.imageMeta == null || validImageMeta(data.imageMeta))
+        && (!('projectImageURL' in data) || data.projectImageURL is string && data.projectImageURL.size() <= 2000)
+        && (!('projectImagePath' in data) || (
+          data.projectImagePath is string
+          && (data.projectImagePath.size() == 0 || data.projectImagePath == 'project-images/' + data.authorId + '/' + projectId + '/project-image')
+        ))
+        && (!('projectImageMeta' in data) || data.projectImageMeta == null || validImageMeta(data.projectImageMeta))
         && (!('lessonPdfURL' in data) || data.lessonPdfURL is string && data.lessonPdfURL.size() <= 2000)
         && (!('lessonPdfPath' in data) || (
           data.lessonPdfPath is string
           && (data.lessonPdfPath.size() == 0 || data.lessonPdfPath == 'project-guides/' + data.authorId + '/' + projectId + '/lesson-plan')
         ))
         && (!('lessonPdfMeta' in data) || data.lessonPdfMeta == null || validLessonPdfMeta(data.lessonPdfMeta))
-        && data.mainFile is map
-        && data.mainFile.keys().hasOnly(['name', 'content'])
-        && validPythonFilename(data.mainFile.name)
-        && data.mainFile.content is string
-        && data.mainFile.content.size() <= 102400
-        && validLibraries(data.libraries)
+        && (validMicroPythonPayload(data) || validBipesPayload(data, projectId))
         && validProjectList(data.pdfLinks, 5, 0)
         && validEmptyList(data.extraLinks)
         && validBnccCodes(data.bnccCodes)
@@ -307,11 +362,15 @@ service cloud.firestore {
         && request.resource.data.authorPhoto == resource.data.authorPhoto
         && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.commentCount == resource.data.commentCount
+        && request.resource.data.get('projectType', 'micropython') == resource.data.get('projectType', 'micropython')
         && changed.hasOnly([
           'title', 'description', 'materials', 'videoURL', 'githubURL',
           'imageURL', 'imagePath', 'imageMeta',
+          'projectImageURL', 'projectImagePath', 'projectImageMeta',
           'lessonPdfURL', 'lessonPdfPath', 'lessonPdfMeta',
-          'mainFile', 'libraries', 'pdfLinks', 'extraLinks', 'bnccCodes', 'updatedAt'
+          'mainFile', 'libraries', 'pdfLinks', 'extraLinks', 'bnccCodes',
+          'blockFileURL', 'blockFilePath', 'blockFileMeta', 'boardVersions',
+          'bipesMode', 'difficulty', 'observations', 'allowRemix', 'updatedAt'
         ])
         && request.resource.data.updatedAt == request.time;
     }

@@ -41,6 +41,9 @@ function createProjectCard(id, project) {
     const date = project.createdAt ? project.createdAt.toDate().toLocaleDateString('pt-BR') : '';
     const directImageUrl = getDirectImageUrl(project.imageURL);
     const authorPhoto = sanitizeHttpUrl(project.authorPhoto || '');
+    const typeBadge = project.projectType === 'bipes-bitdoglab'
+        ? '<span class="project-type-badge"><span class="material-icons">extension</span>BIPES BitDogLab</span>'
+        : '';
     
     // Sempre mostra o placeholder por baixo, imagem por cima
     const imageHtml = directImageUrl 
@@ -56,6 +59,7 @@ function createProjectCard(id, project) {
 
     card.innerHTML = `
         ${imageHtml}
+        ${typeBadge}
         <h3 class="project-card-title">${escapeHtml(project.title)}</h3>
         ${bnccHtml}
         <p class="project-card-desc">${escapeHtml(project.description)}</p>

@@ -26,7 +26,17 @@ service firebase.storage {
       allow create, update: if isGoogleUser()
         && validProjectPath(userId, projectId)
         && request.resource.size > 0
-        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.size <= 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /project-images/{userId}/{projectId}/project-image {
+      allow read: if true;
+      allow create, update: if isGoogleUser()
+        && validProjectPath(userId, projectId)
+        && request.resource.size > 0
+        && request.resource.size <= 2 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
@@ -36,8 +46,18 @@ service firebase.storage {
       allow create, update: if isGoogleUser()
         && validProjectPath(userId, projectId)
         && request.resource.size > 0
-        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
+      allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /project-blocks/{userId}/{projectId}/workspace.xml {
+      allow read: if true;
+      allow create, update: if isGoogleUser()
+        && validProjectPath(userId, projectId)
+        && request.resource.size > 0
+        && request.resource.size <= 500 * 1024
+        && request.resource.contentType == 'application/xml';
       allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 

@@ -54,9 +54,13 @@ async function renderProjectDetail(project) {
     const date = project.createdAt ? project.createdAt.toDate().toLocaleDateString('pt-BR') : '';
     const canManage = await canManageProject(project);
     const coverImageUrl = getDirectImageUrl(project.imageURL);
+    const bipesProjectImageUrl = getDirectImageUrl(project.projectImageURL);
     const authorPhoto = sanitizeHttpUrl(project.authorPhoto || '');
     const githubURL = sanitizeGithubRepoUrl(project.githubURL || '');
     const videoEmbed = getVideoEmbed(project.videoURL || '');
+    const isBipes = project.projectType === 'bipes-bitdoglab';
+    const bipesModeLabels = { basic: 'Básico', robot: 'Robô móvel', greenhouse: 'Estufa', piano: 'Piano musical', other: 'Outro' };
+    const difficultyLabels = { beginner: 'Iniciante', intermediate: 'Intermediário', advanced: 'Avançado' };
 
     container.innerHTML = `
         <!-- Header do projeto -->
@@ -81,6 +85,7 @@ async function renderProjectDetail(project) {
             ${coverImageUrl ? `<img src="${escapeHtml(coverImageUrl)}" class="detail-image" alt="${escapeHtml(project.title)}">` : ''}
             
             <!-- Info principal -->
+            ${isBipes ? '<span class="project-type-badge"><span class="material-icons">extension</span>BIPES BitDogLab</span>' : ''}
             <h1 class="detail-title">${escapeHtml(project.title)}</h1>
             <div class="detail-author">
                 <img src="${escapeHtml(authorPhoto)}" alt="" class="detail-author-avatar">
@@ -112,7 +117,30 @@ async function renderProjectDetail(project) {
                 <p class="detail-description">${escapeHtml(project.description).replace(/\n/g, '<br>')}</p>
             </div>
 
-            ${project.materials ? `
+            ${isBipes ? `
+            ${bipesProjectImageUrl ? `
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">image</span> Imagem do projeto em blocos
+                </h2>
+                <img src="${escapeHtml(bipesProjectImageUrl)}" class="detail-project-image" alt="Blocos do projeto ${escapeHtml(project.title)}">
+            </div>
+            ` : ''}
+            <div class="detail-section">
+                <h2 class="detail-section-title">
+                    <span class="material-icons">tune</span> Configuração do projeto
+                </h2>
+                <div class="project-meta-list">
+                    ${(project.boardVersions || []).map(version => `<span class="project-meta-chip">BitDogLab ${escapeHtml(version.toUpperCase())}</span>`).join('')}
+                    ${project.bipesMode ? `<span class="project-meta-chip">Modo: ${escapeHtml(bipesModeLabels[project.bipesMode] || project.bipesMode)}</span>` : ''}
+                    ${project.difficulty ? `<span class="project-meta-chip">Dificuldade: ${escapeHtml(difficultyLabels[project.difficulty] || project.difficulty)}</span>` : ''}
+                    ${project.allowRemix ? '<span class="project-meta-chip">Remix autorizado</span>' : ''}
+                </div>
+                ${project.observations ? `<p class="detail-description">${escapeHtml(project.observations).replace(/\n/g, '<br>')}</p>` : ''}
+            </div>
+            ` : ''}
+
+            ${!isBipes && project.materials ? `
             <!-- Materiais utilizados -->
             <div class="detail-section">
                 <h2 class="detail-section-title">
@@ -167,12 +195,12 @@ async function renderProjectDetail(project) {
             </div>
 
             <!-- Enviar para a Placa -->
-            <div class="detail-section detail-flash">
+            ${!isBipes ? `<div class="detail-section detail-flash">
                 <button type="button" class="btn btn-flash" data-project-action="flash-project">
                     <span class="material-icons">bolt</span> Enviar para a Placa
                 </button>
                 <p class="flash-hint">Envia o código direto para a BitDogLab via WebSerial</p>
-            </div>
+            </div>` : ''}
         </div>
     `;
 
@@ -234,6 +262,29 @@ function handleProjectDetailAction(event) {
 // Renderiza arquivos do projeto para download
 function renderProjectFiles(project) {
     let html = '';
+
+    if (project.projectType === 'bipes-bitdoglab') {
+        const blockFileURL = sanitizeHttpUrl(project.blockFileURL || '');
+        if (!blockFileURL) return '<p class="empty-message">Arquivo XML indisponível.</p>';
+        const blockName = project.blockFileMeta?.name || 'workspace.bipes.xml';
+        const blockSize = project.blockFileMeta?.size ? formatByteSize(project.blockFileMeta.size) : '';
+        return `
+            <div class="file-item">
+                <div class="file-info">
+                    <span class="material-icons file-icon">extension</span>
+                    <div>
+                        <span class="file-name">${escapeHtml(blockName)}</span>
+                        <span class="file-size">${escapeHtml(blockSize)}</span>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <a href="${escapeHtml(blockFileURL)}" target="_blank" rel="noopener" class="btn btn-small btn-download">
+                        <span class="material-icons">download</span> Baixar XML
+                    </a>
+                </div>
+            </div>
+        `;
+    }
 
     // Main.py
     if (project.mainFile) {
@@ -585,6 +636,10 @@ function downloadPyFile(fileIndex) {
 // Enviar projeto atual para a placa
 async function flashCurrentProject() {
     if (!currentProject) return;
+    if (currentProject.projectType === 'bipes-bitdoglab') {
+        alert('Baixe o XML e abra o projeto no BIPES BitDogLab.');
+        return;
+    }
 
     if (!window.flashManager || !window.webSerial?.connected) {
         alert('Conecte a placa primeiro. Clique em "Conectar" no topo da página.');
@@ -663,6 +718,12 @@ function isProjectOwner(project) {
     return user && project.authorId === user.uid;
 }
 
+function formatByteSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
 async function isCurrentUserAdmin() {
     const user = auth.currentUser;
     if (!user) return false;
@@ -696,6 +757,27 @@ async function openEditProjectModal() {
     document.getElementById('editProjectGithub').value = currentProject.githubURL || '';
     document.getElementById('editLessonPdf').value = '';
     document.getElementById('editProjectImage').value = '';
+    document.getElementById('editBipesProjectImage').value = '';
+    document.getElementById('editMainFile').value = '';
+    document.getElementById('editLibraries').value = '';
+    document.getElementById('editBlockXml').value = '';
+
+    const isBipes = currentProject.projectType === 'bipes-bitdoglab';
+    document.getElementById('editBipesProjectType').hidden = !isBipes;
+    document.getElementById('editMicroPythonFields').hidden = isBipes;
+    document.getElementById('editBipesFields').hidden = !isBipes;
+    document.getElementById('editProjectMaterialsFields').hidden = isBipes;
+    document.getElementById('editProjectObservations').value = isBipes ? (currentProject.observations || '') : '';
+    document.getElementById('editAllowRemix').checked = isBipes && currentProject.allowRemix === true;
+    document.querySelectorAll('input[name="editBoardVersion"]').forEach(input => {
+        input.checked = isBipes && (currentProject.boardVersions || []).includes(input.value);
+    });
+    document.querySelectorAll('input[name="editBipesMode"]').forEach(input => {
+        input.checked = isBipes && currentProject.bipesMode === input.value;
+    });
+    document.querySelectorAll('input[name="editDifficulty"]').forEach(input => {
+        input.checked = isBipes && currentProject.difficulty === input.value;
+    });
 
     // Carrega tags BNCC existentes
     bnccTagState.edit = (currentProject.bnccCodes || []).slice();
@@ -731,13 +813,24 @@ async function saveProjectEdit() {
     }
     const title = document.getElementById('editProjectTitle').value.trim();
     const description = document.getElementById('editProjectDescription').value.trim();
-    const materials = normalizeMaterialsInput(document.getElementById('editProjectMaterials').value);
+    const enteredMaterials = normalizeMaterialsInput(document.getElementById('editProjectMaterials').value);
     const videoURL = document.getElementById('editProjectVideo').value.trim();
     const githubURL = document.getElementById('editProjectGithub').value.trim();
+    const isBipes = currentProject.projectType === 'bipes-bitdoglab';
+    const materials = isBipes ? '' : enteredMaterials;
     const lessonPdfInput = document.getElementById('editLessonPdf');
     const lessonPdfFile = lessonPdfInput.files[0] || null;
     const mainFileInput = document.getElementById('editMainFile');
     const librariesInput = document.getElementById('editLibraries');
+    const blockXmlInput = document.getElementById('editBlockXml');
+    const blockXmlFile = blockXmlInput.files[0] || null;
+    const bipesProjectImageInput = document.getElementById('editBipesProjectImage');
+    const bipesProjectImageFile = bipesProjectImageInput.files[0] || null;
+    const boardVersions = Array.from(document.querySelectorAll('input[name="editBoardVersion"]:checked')).map(input => input.value);
+    const bipesMode = document.querySelector('input[name="editBipesMode"]:checked')?.value || '';
+    const difficulty = document.querySelector('input[name="editDifficulty"]:checked')?.value || '';
+    const observations = document.getElementById('editProjectObservations').value.trim();
+    const allowRemix = document.getElementById('editAllowRemix').checked;
     const coverInput = document.getElementById('editProjectImage');
     const coverFile = coverInput.files[0] || null;
 
@@ -746,17 +839,27 @@ async function saveProjectEdit() {
     if (title.length > 100) return alert('Título muito longo. Máximo: 100 caracteres.');
     if (!description) return alert('Preencha a descrição.');
     if (description.length > 2000) return alert('Descrição muito longa. Máximo: 2000 caracteres.');
-    try {
-        validateMaterialsList(materials);
-    } catch (e) {
-        return alert(e.message);
+    if (!isBipes) {
+        try {
+            validateMaterialsList(materials);
+        } catch (e) {
+            return alert(e.message);
+        }
     }
-    if (!currentProject.lessonPdfURL && !(currentProject.pdfLinks && currentProject.pdfLinks.length) && !lessonPdfFile) {
+    if (!isBipes && !currentProject.lessonPdfURL && !(currentProject.pdfLinks && currentProject.pdfLinks.length) && !lessonPdfFile) {
         return alert('Envie o PDF com plano de aula e estudo dirigido.');
     }
+    if (isBipes && !currentProject.imageURL && !coverFile) return alert('Envie uma imagem de capa para o projeto.');
+    if (isBipes && !currentProject.projectImageURL && !bipesProjectImageFile) return alert('Envie uma imagem do projeto mostrando os blocos.');
+    if (isBipes && !currentProject.blockFileURL && !blockXmlFile) return alert('Envie o arquivo XML do BIPES BitDogLab.');
+    if (isBipes && boardVersions.length === 0) return alert('Marque pelo menos uma versão da BitDogLab.');
+    if (isBipes && !bipesMode) return alert('Marque o modo utilizado no BIPES BitDogLab.');
+    if (isBipes && !allowRemix) return alert('Confirme a autorização para compartilhar e remixar o projeto.');
+    if (observations.length > 1000) return alert('As observações devem ter no máximo 1000 caracteres.');
     if (bnccTagState.edit.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
     if (bnccTagState.edit.length > LIMITS.MAX_BNCC_CODES) return alert(`Selecione no máximo ${LIMITS.MAX_BNCC_CODES} códigos BNCC por projeto.`);
     if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
+    if (bipesProjectImageInput.files.length > 1) return alert('Envie apenas uma imagem do projeto.');
     if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
 
     if (videoURL && !isValidVideoLink(videoURL)) {
@@ -769,6 +872,7 @@ async function saveProjectEdit() {
 
     try {
         validateCoverImage(coverFile);
+        if (isBipes) validateBipesProjectImage(bipesProjectImageFile);
     } catch (e) {
         return alert(e.message);
     }
@@ -777,6 +881,16 @@ async function saveProjectEdit() {
         validateLessonPdf(lessonPdfFile);
     } catch (e) {
         return alert(e.message);
+    }
+
+    let blockXmlContent = '';
+    if (isBipes && blockXmlFile) {
+        try {
+            blockXmlContent = await readEditFileAsText(blockXmlFile);
+            validateBlockXml(blockXmlFile, blockXmlContent);
+        } catch (e) {
+            return alert(e.message);
+        }
     }
 
     const saveBtn = document.getElementById('saveEditBtn');
@@ -796,8 +910,16 @@ async function saveProjectEdit() {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
+        if (isBipes) {
+            updateData.boardVersions = boardVersions;
+            updateData.bipesMode = bipesMode;
+            updateData.difficulty = difficulty;
+            updateData.observations = observations;
+            updateData.allowRemix = allowRemix;
+        }
+
         // Se enviou novo Main.py, atualiza
-        if (mainFileInput.files[0]) {
+        if (!isBipes && mainFileInput.files[0]) {
             const file = mainFileInput.files[0];
             if (!isSafePythonFilename(file.name)) {
                 throw new Error('O arquivo principal deve usar apenas letras, números, _ ou - e terminar em .py');
@@ -807,7 +929,7 @@ async function saveProjectEdit() {
         }
 
         // Se enviou novas bibliotecas, atualiza
-        if (librariesInput.files.length > 0) {
+        if (!isBipes && librariesInput.files.length > 0) {
             if (librariesInput.files.length > LIMITS.MAX_LIBRARIES) {
                 throw new Error(`Máximo de ${LIMITS.MAX_LIBRARIES} bibliotecas.`);
             }
@@ -834,6 +956,13 @@ async function saveProjectEdit() {
             }
         }
 
+        if (isBipes && bipesProjectImageFile) {
+            const projectImageUpload = await uploadBipesProjectImage(bipesProjectImageFile, currentProject.authorId, currentProjectId);
+            updateData.projectImageURL = projectImageUpload.projectImageURL;
+            updateData.projectImagePath = projectImageUpload.projectImagePath;
+            updateData.projectImageMeta = projectImageUpload.projectImageMeta;
+        }
+
         if (lessonPdfFile) {
             const lessonUpload = await uploadLessonPdf(lessonPdfFile, currentProject.authorId, currentProjectId);
             updateData.lessonPdfURL = lessonUpload.lessonPdfURL;
@@ -844,6 +973,13 @@ async function saveProjectEdit() {
             if (currentProject.lessonPdfPath && currentProject.lessonPdfPath !== lessonUpload.lessonPdfPath) {
                 await deleteLessonPdf(currentProject.lessonPdfPath);
             }
+        }
+
+        if (isBipes && blockXmlFile) {
+            const blockUpload = await uploadBlockXml(blockXmlFile, blockXmlContent, currentProject.authorId, currentProjectId);
+            updateData.blockFileURL = blockUpload.blockFileURL;
+            updateData.blockFilePath = blockUpload.blockFilePath;
+            updateData.blockFileMeta = blockUpload.blockFileMeta;
         }
 
         await db.collection('projects').doc(currentProjectId).update(updateData);
@@ -877,7 +1013,9 @@ async function deleteCurrentProject() {
     
     try {
         await deleteProjectCover(currentProject.imagePath);
+        await deleteBipesProjectImage(currentProject.projectImagePath);
         await deleteLessonPdf(currentProject.lessonPdfPath);
+        await deleteBlockXml(currentProject.blockFilePath);
 
         const projectRef = db.collection('projects').doc(currentProjectId);
         const authorRef = db.collection('users').doc(currentProject.authorId);
