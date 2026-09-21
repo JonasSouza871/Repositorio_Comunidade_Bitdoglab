@@ -215,6 +215,38 @@ function isValidGithubLink(url) {
     return /^https:\/\/(www\.)?github\.com\/[^/\s]+\/[^/\s]+\/?/.test(url);
 }
 
+// Cada usuario possui no maximo 20 IDs reservados. Isso permite que as regras
+// imponham o limite sem depender apenas de um contador enviado pelo navegador.
+async function getAvailableProjectId(userId) {
+    const snapshot = await db.collection('projects')
+        .where('authorId', '==', userId)
+        .limit(LIMITS.MAX_PROJECTS_PER_USER)
+        .get();
+
+    if (snapshot.size >= LIMITS.MAX_PROJECTS_PER_USER) {
+        throw new Error(`Limite de ${LIMITS.MAX_PROJECTS_PER_USER} projetos por usuario atingido.`);
+    }
+
+    const usedIds = new Set(snapshot.docs.map(doc => doc.id));
+    for (let slot = 0; slot < LIMITS.MAX_PROJECTS_PER_USER; slot++) {
+        const projectId = `${userId}_${slot}`;
+        if (!usedIds.has(projectId)) return projectId;
+    }
+
+    throw new Error(`Limite de ${LIMITS.MAX_PROJECTS_PER_USER} projetos por usuario atingido.`);
+}
+
+async function rollbackReservedProject(projectId, userId) {
+    const batch = db.batch();
+    batch.delete(db.collection('projects').doc(projectId));
+    batch.update(db.collection('users').doc(userId), {
+        projectCount: firebase.firestore.FieldValue.increment(-1),
+        projectMutationId: projectId,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
+}
+
 function isValidVideoLink(url) {
     const safeUrl = sanitizeHttpsUrl(url);
     if (!safeUrl) return false;
@@ -343,6 +375,7 @@ async function publishProject() {
     let coverUpload = null;
     let lessonUpload = null;
     let projectSaved = false;
+    let projectId = null;
 
     try {
         // Lê Main.py
@@ -364,28 +397,23 @@ async function publishProject() {
         progressText.textContent = 'Salvando projeto...';
 
         // Reserva ID do projeto e envia capa, se houver
-        const projectId = db.collection('projects').doc().id;
-        progressFill.style.width = '80%';
-        progressText.textContent = 'Enviando arquivos...';
-        currentStep = 'upload da imagem de capa';
-        coverUpload = await uploadProjectCover(coverFile, user.uid, projectId);
-        currentStep = 'upload do PDF pedagógico';
-        lessonUpload = await uploadLessonPdf(lessonPdfFile, user.uid, projectId);
-
-        // Salva projeto no Firestore
-        currentStep = 'salvar projeto no Firestore';
-        await db.collection('projects').doc(projectId).set({
+        projectId = await getAvailableProjectId(user.uid);
+        const projectRef = db.collection('projects').doc(projectId);
+        const userRef = db.collection('users').doc(user.uid);
+        const createBatch = db.batch();
+        currentStep = 'reservar projeto no Firestore';
+        createBatch.set(projectRef, {
             title: title,
             description: description,
             materials: materials,
             videoURL: videoURL,
             githubURL: githubURL,
-            imageURL: coverUpload.imageURL,
-            imagePath: coverUpload.imagePath,
-            imageMeta: coverUpload.imageMeta,
-            lessonPdfURL: lessonUpload.lessonPdfURL,
-            lessonPdfPath: lessonUpload.lessonPdfPath,
-            lessonPdfMeta: lessonUpload.lessonPdfMeta,
+            imageURL: '',
+            imagePath: '',
+            imageMeta: null,
+            lessonPdfURL: '',
+            lessonPdfPath: '',
+            lessonPdfMeta: null,
             authorId: user.uid,
             authorName: userData.name || user.displayName,
             authorPhoto: userData.photoURL || user.photoURL || '',
@@ -398,22 +426,32 @@ async function publishProject() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        createBatch.update(userRef, {
+            projectCount: firebase.firestore.FieldValue.increment(1),
+            projectMutationId: projectId,
+            email: firebase.firestore.FieldValue.delete(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        await createBatch.commit();
         projectSaved = true;
 
-        // Incrementa contador do autor sem bloquear o projeto se falhar.
-        progressFill.style.width = '90%';
-        progressText.textContent = 'Atualizando perfil...';
-        currentStep = 'atualizar contador do usuário';
-        try {
-            await db.collection('users').doc(user.uid).update({
-                projectCount: firebase.firestore.FieldValue.increment(1),
-                commentCount: userData.commentCount || 0,
-                email: firebase.firestore.FieldValue.delete(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        } catch (counterError) {
-            console.warn('Projeto salvo, mas não foi possível atualizar contador:', counterError);
-        }
+        progressFill.style.width = '80%';
+        progressText.textContent = 'Enviando arquivos...';
+        currentStep = 'upload da imagem de capa';
+        coverUpload = await uploadProjectCover(coverFile, user.uid, projectId);
+        currentStep = 'upload do PDF pedagógico';
+        lessonUpload = await uploadLessonPdf(lessonPdfFile, user.uid, projectId);
+
+        currentStep = 'finalizar projeto no Firestore';
+        await projectRef.update({
+            imageURL: coverUpload.imageURL,
+            imagePath: coverUpload.imagePath,
+            imageMeta: coverUpload.imageMeta,
+            lessonPdfURL: lessonUpload.lessonPdfURL,
+            lessonPdfPath: lessonUpload.lessonPdfPath,
+            lessonPdfMeta: lessonUpload.lessonPdfMeta,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
         progressFill.style.width = '100%';
         progressText.textContent = 'Projeto publicado!';
@@ -424,11 +462,18 @@ async function publishProject() {
         }, 1000);
 
     } catch (error) {
-        if (!projectSaved && coverUpload && coverUpload.imagePath) {
+        if (coverUpload && coverUpload.imagePath) {
             await deleteProjectCover(coverUpload.imagePath);
         }
-        if (!projectSaved && lessonUpload && lessonUpload.lessonPdfPath) {
+        if (lessonUpload && lessonUpload.lessonPdfPath) {
             await deleteLessonPdf(lessonUpload.lessonPdfPath);
+        }
+        if (projectSaved && projectId) {
+            try {
+                await rollbackReservedProject(projectId, user.uid);
+            } catch (rollbackError) {
+                console.error('Nao foi possivel desfazer a reserva do projeto:', rollbackError);
+            }
         }
 
         console.error('Erro ao publicar:', error);

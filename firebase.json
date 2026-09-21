@@ -12,6 +12,7 @@
       "firestore.rules",
       "storage.rules",
       "firestore.indexes.json",
+      "app.py",
       "prompt.md",
       "contexto_problema.md",
       "expressions.txt",
@@ -19,6 +20,11 @@
       ".firebase/**",
       "scripts/**",
       "skills/**",
+      "visual/**",
+      "bncc/**",
+      "js/firebase-config.example.js",
+      "images/programming.png",
+      "images/icon-bitdoglab.png",
       "**/.*",
       "**/node_modules/**",
       "**/*.md",
@@ -54,7 +60,7 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com/firebasejs/ https://apis.google.com https://accounts.google.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; frame-src https://www.youtube.com https://drive.google.com https://docs.google.com https://accounts.google.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleusercontent.com https://*.firebaseapp.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://firestore.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://www.gstatic.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+            "value": "default-src 'self'; script-src 'self' https://www.gstatic.com/firebasejs/ https://www.gstatic.com/recaptcha/ https://www.google.com/recaptcha/ https://apis.google.com https://accounts.google.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; frame-src https://www.google.com/recaptcha/ https://www.youtube.com https://drive.google.com https://docs.google.com https://accounts.google.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://*.googleusercontent.com https://*.firebaseapp.com; connect-src 'self' https://www.google.com/recaptcha/ https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net https://firestore.googleapis.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://accounts.google.com https://www.gstatic.com; worker-src 'self' blob: https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self';"
           }
         ]
       },

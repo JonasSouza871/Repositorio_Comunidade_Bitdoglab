@@ -1,6 +1,7 @@
 # Firebase local/generated files
 .firebase/
 firebase-debug.log*
+node_modules/
 
 # Local Firebase credentials
 js/firebase-config.js

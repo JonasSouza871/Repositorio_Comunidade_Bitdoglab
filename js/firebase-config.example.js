@@ -19,6 +19,14 @@ const firebaseConfig = {
 // Inicializa Firebase
 firebase.initializeApp(firebaseConfig);
 
+// Registre o app no Firebase App Check e informe a chave publica do
+// reCAPTCHA Enterprise vinculada aos dominios oficiais do site.
+const appCheck = firebase.appCheck();
+appCheck.activate(
+    new firebase.appCheck.ReCaptchaEnterpriseProvider('SUA_CHAVE_PUBLICA_RECAPTCHA_ENTERPRISE'),
+    true
+);
+
 // Instâncias globais
 const auth = firebase.auth();
 const db = firebase.firestore();

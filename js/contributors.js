@@ -60,7 +60,7 @@ function createContributorCard(userId, userData, rank) {
     card.innerHTML =
         '<div class="contributor-rank ' + rankClass + '">' + rankIcon + '</div>' +
         '<div class="contributor-profile">' +
-            '<img src="' + escapeHtml(photoURL) + '" class="contributor-avatar" alt="' + escapeHtml(userData.name) + '" onerror="this.style.display=\'none\'">' +
+            '<img src="' + escapeHtml(photoURL) + '" class="contributor-avatar" alt="' + escapeHtml(userData.name) + '">' +
             '<div class="contributor-info">' +
                 '<h3 class="contributor-name">' + escapeHtml(userData.name) + '</h3>' +
                 '<div class="contributor-stats">' +

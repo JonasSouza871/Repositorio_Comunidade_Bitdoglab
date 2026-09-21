@@ -44,7 +44,7 @@ function createProjectCard(id, project) {
     
     // Sempre mostra o placeholder por baixo, imagem por cima
     const imageHtml = directImageUrl 
-        ? `<div class="project-image-wrapper"><img src="${escapeHtml(directImageUrl)}" class="project-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'"><div class="project-image-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1"><span class="material-icons">image</span></div></div>`
+        ? `<div class="project-image-wrapper"><img src="${escapeHtml(directImageUrl)}" class="project-image" alt="${escapeHtml(project.title)}"><div class="project-image-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1"><span class="material-icons">image</span></div></div>`
         : `<div class="project-image-placeholder"><span class="material-icons">image</span></div>`;
 
     // Tags BNCC
@@ -61,7 +61,7 @@ function createProjectCard(id, project) {
         <p class="project-card-desc">${escapeHtml(project.description)}</p>
         <div class="project-card-footer">
             <div class="project-card-author">
-                <img src="${escapeHtml(authorPhoto)}" alt="" onerror="this.style.display='none'">
+                <img src="${escapeHtml(authorPhoto)}" alt="">
                 <span>${escapeHtml(project.authorName)}</span>
             </div>
             <span class="project-card-date">${date}</span>

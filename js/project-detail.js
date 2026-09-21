@@ -78,12 +78,12 @@ async function renderProjectDetail(project) {
 
         <div class="detail-body">
             <!-- Imagem de capa -->
-            ${coverImageUrl ? `<img src="${escapeHtml(coverImageUrl)}" class="detail-image" alt="${escapeHtml(project.title)}" onerror="this.style.display='none'">` : ''}
+            ${coverImageUrl ? `<img src="${escapeHtml(coverImageUrl)}" class="detail-image" alt="${escapeHtml(project.title)}">` : ''}
             
             <!-- Info principal -->
             <h1 class="detail-title">${escapeHtml(project.title)}</h1>
             <div class="detail-author">
-                <img src="${escapeHtml(authorPhoto)}" alt="" class="detail-author-avatar" onerror="this.style.display='none'">
+                <img src="${escapeHtml(authorPhoto)}" alt="" class="detail-author-avatar">
                 <div>
                     <span class="detail-author-name">${escapeHtml(project.authorName)}</span>
                     <span class="detail-date">Publicado em ${date}</span>
@@ -869,17 +869,25 @@ async function deleteCurrentProject() {
         await deleteProjectCover(currentProject.imagePath);
         await deleteLessonPdf(currentProject.lessonPdfPath);
 
-        await db.collection('projects').doc(currentProjectId).delete();
+        const projectRef = db.collection('projects').doc(currentProjectId);
+        const authorRef = db.collection('users').doc(currentProject.authorId);
+        const authorSnapshot = await authorRef.get();
+        const deletingAsOwner = user.uid === currentProject.authorId;
 
-        // Decrementa contador de projetos do autor
-        try {
-            await db.collection('users').doc(currentProject.authorId).update({
+        if (deletingAsOwner && !authorSnapshot.exists) {
+            throw new Error('Perfil do autor nao encontrado.');
+        }
+
+        const deleteBatch = db.batch();
+        deleteBatch.delete(projectRef);
+        if (authorSnapshot.exists && (authorSnapshot.data().projectCount || 0) > 0) {
+            deleteBatch.update(authorRef, {
                 projectCount: firebase.firestore.FieldValue.increment(-1),
+                projectMutationId: currentProjectId,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-        } catch (counterError) {
-            console.warn('Projeto excluído, mas não foi possível atualizar contador:', counterError);
         }
+        await deleteBatch.commit();
 
         // Volta para a home
         backToHome();

@@ -89,3 +89,11 @@ function getDirectImageUrl(value) {
         return '';
     }
 }
+
+// Mantem o fallback visual sem depender de handlers inline, que sao
+// bloqueados pela politica CSP do site.
+document.addEventListener('error', function(event) {
+    if (event.target instanceof HTMLImageElement) {
+        event.target.style.display = 'none';
+    }
+}, true);
