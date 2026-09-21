@@ -50,6 +50,9 @@
                 <div id="userInfo" class="user-info" style="display: none;">
                     <img id="userAvatar" class="user-avatar" alt="Avatar">
                     <span id="userName" class="user-name"></span>
+                    <button id="editProfileBtn" class="btn btn-small btn-profile" type="button" title="Editar perfil">
+                        <span class="material-icons">person</span> Perfil
+                    </button>
                     <button id="logoutBtn" class="btn btn-small">Sair</button>
                 </div>
 
@@ -74,6 +77,11 @@
                         <button id="addProjectBtn" class="btn btn-add" style="display: none;">
                             <span class="material-icons">add</span> Novo Projeto
                         </button>
+                    </div>
+                    <div id="profileAlert" class="profile-alert" role="alert" style="display: none;">
+                        <span class="material-icons" aria-hidden="true">info</span>
+                        <span>Complete seu perfil para publicar projetos.</span>
+                        <button id="profileAlertBtn" class="btn btn-small" type="button">Completar perfil</button>
                     </div>
                     
                     <!-- Barra de Busca -->
@@ -286,11 +294,13 @@
         </div>
     </div>
 
-    <!-- Modal de Cadastro de Perfil -->
+    <!-- Modal de Cadastro e Edição de Perfil -->
     <div id="profileModal" class="modal-overlay">
-        <div class="modal">
-            <h2 class="modal-title">Bem-vindo à Comunidade!</h2>
-            <p class="modal-subtitle">Complete seu perfil para começar a contribuir.</p>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+            <button id="closeProfileBtn" class="modal-close" type="button" aria-label="Fechar edição de perfil">&times;</button>
+            <h2 id="profileModalTitle" class="modal-title">Complete seu perfil</h2>
+            <p id="profileModalSubtitle" class="modal-subtitle">Preencha seus dados para começar a contribuir.</p>
+            <div id="profileModalNotice" class="form-warning" role="status" style="display: none;"></div>
             <div class="modal-form">
                 <label class="form-label" for="profileName">Nome</label>
                 <input type="text" id="profileName" class="form-input" placeholder="Seu nome completo" maxlength="100">
@@ -298,7 +308,13 @@
                 <label class="form-label" for="profileBio">Bio</label>
                 <textarea id="profileBio" class="form-textarea" placeholder="Conte um pouco sobre você..." maxlength="200" rows="3"></textarea>
 
-                <button class="btn btn-save">Salvar Perfil</button>
+                <label class="form-label" for="profileLinkedin">LinkedIn <span class="form-hint">(opcional)</span></label>
+                <input type="url" id="profileLinkedin" class="form-input" placeholder="https://linkedin.com/in/seu-perfil" maxlength="200">
+
+                <label class="form-label" for="profileGithub">GitHub <span class="form-hint">(opcional)</span></label>
+                <input type="url" id="profileGithub" class="form-input" placeholder="https://github.com/seu-usuario" maxlength="200">
+
+                <button id="saveProfileBtn" class="btn btn-save" type="button">Salvar perfil</button>
             </div>
         </div>
     </div>

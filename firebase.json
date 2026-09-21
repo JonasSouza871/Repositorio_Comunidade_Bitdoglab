@@ -7,9 +7,11 @@
   },
   "hosting": {
     "public": ".",
-    "ignore": [
-      "firebase.json",
-      "firestore.rules",
+      "ignore": [
+        "firebase.json",
+        "exemplo-projeto-bitdoglab/**",
+        "__pycache__/**",
+        "firestore.rules",
       "storage.rules",
       "firestore.indexes.json",
       "app.py",

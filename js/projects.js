@@ -10,7 +10,8 @@
 const LIMITS = {
     MAIN_FILE_MAX_KB: 100,        // Main.py max 100KB
     LIB_FILE_MAX_KB: 100,         // Cada biblioteca max 100KB
-    MAX_LIBRARIES: 10,            // Máximo 10 bibliotecas
+    MAX_LIBRARIES: 5,             // Máximo 5 bibliotecas
+    MAX_BNCC_CODES: 5,            // Máximo 5 habilidades BNCC
     TITLE_MAX_CHARS: 100,         // Título max 100 caracteres
     DESCRIPTION_MAX_CHARS: 2000,  // Descrição max 2000 caracteres
     MATERIALS_MAX_CHARS: 2000,    // Lista de materiais max 2000 caracteres
@@ -35,10 +36,19 @@ const bnccTagState = {
 };
 
 // Abre modal de novo projeto
-function openProjectModal() {
+async function openProjectModal() {
     const user = auth.currentUser;
     if (!user) {
         alert('Faça login para publicar um projeto.');
+        return;
+    }
+    if (window.currentUserProfileComplete === false) {
+        alert('Complete seu perfil antes de publicar um projeto.');
+        const profileSnapshot = await db.collection('users').doc(user.uid).get();
+        openProfileModal(user, {
+            required: true,
+            profileData: profileSnapshot.exists ? profileSnapshot.data() : null
+        });
         return;
     }
     document.getElementById('projectModal').classList.add('active');
@@ -243,7 +253,12 @@ async function getAvailableProjectId(userId) {
     throw new Error(`Limite de ${LIMITS.MAX_PROJECTS_PER_USER} projetos por usuario atingido.`);
 }
 
-async function rollbackReservedProject(projectId, userId) {
+async function rollbackReservedProject(projectId, userId, counterUpdated) {
+    if (!counterUpdated) {
+        await db.collection('projects').doc(projectId).delete();
+        return;
+    }
+
     const batch = db.batch();
     batch.delete(db.collection('projects').doc(projectId));
     batch.update(db.collection('users').doc(userId), {
@@ -306,7 +321,7 @@ async function publishProject() {
     if (!mainFileInput.files[0]) return alert('Envie o arquivo Main.py.');
     if (!lessonPdfFile) return alert('Envie o PDF com plano de aula e estudo dirigido.');
     if (bnccTagState.project.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
-    if (bnccTagState.project.length > 10) return alert('Selecione no máximo 10 códigos BNCC por projeto.');
+    if (bnccTagState.project.length > LIMITS.MAX_BNCC_CODES) return alert(`Selecione no máximo ${LIMITS.MAX_BNCC_CODES} códigos BNCC por projeto.`);
     if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
     if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
 
@@ -370,6 +385,12 @@ async function publishProject() {
     if (!userData) {
         return alert('Complete seu perfil antes de publicar projetos.');
     }
+    if (!isProfileComplete(userData)) {
+        setProfileCompletionState(false, false);
+        alert('Complete seu perfil antes de publicar projetos.');
+        openProfileModal(user, { required: true, profileData: userData });
+        return;
+    }
 
     if ((userData.projectCount || 0) >= LIMITS.MAX_PROJECTS_PER_USER) {
         return alert(`Limite de ${LIMITS.MAX_PROJECTS_PER_USER} projetos por usuário atingido.`);
@@ -386,6 +407,7 @@ async function publishProject() {
     let coverUpload = null;
     let lessonUpload = null;
     let projectSaved = false;
+    let counterUpdated = false;
     let projectId = null;
 
     try {
@@ -411,9 +433,8 @@ async function publishProject() {
         projectId = await getAvailableProjectId(user.uid);
         const projectRef = db.collection('projects').doc(projectId);
         const userRef = db.collection('users').doc(user.uid);
-        const createBatch = db.batch();
         currentStep = 'reservar projeto no Firestore';
-        createBatch.set(projectRef, {
+        await projectRef.set({
             title: title,
             description: description,
             materials: materials,
@@ -437,14 +458,21 @@ async function publishProject() {
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        createBatch.update(userRef, {
-            projectCount: firebase.firestore.FieldValue.increment(1),
-            projectMutationId: projectId,
-            email: firebase.firestore.FieldValue.delete(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await createBatch.commit();
         projectSaved = true;
+
+        // O contador nao pode impedir a criacao do projeto. O limite real
+        // continua imposto pelos 20 IDs aceitos nas regras do Firestore.
+        try {
+            await userRef.update({
+                projectCount: userData.projectCount + 1,
+                projectMutationId: projectId,
+                email: firebase.firestore.FieldValue.delete(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            counterUpdated = true;
+        } catch (counterError) {
+            console.warn('Projeto reservado; contador sera atualizado novamente ao finalizar:', counterError);
+        }
 
         progressFill.style.width = '80%';
         progressText.textContent = 'Enviando arquivos...';
@@ -481,7 +509,7 @@ async function publishProject() {
         }
         if (projectSaved && projectId) {
             try {
-                await rollbackReservedProject(projectId, user.uid);
+                await rollbackReservedProject(projectId, user.uid, counterUpdated);
             } catch (rollbackError) {
                 console.error('Nao foi possivel desfazer a reserva do projeto:', rollbackError);
             }

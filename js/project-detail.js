@@ -755,7 +755,7 @@ async function saveProjectEdit() {
         return alert('Envie o PDF com plano de aula e estudo dirigido.');
     }
     if (bnccTagState.edit.length === 0) return alert('Adicione pelo menos um código BNCC ao projeto.');
-    if (bnccTagState.edit.length > 10) return alert('Selecione no máximo 10 códigos BNCC por projeto.');
+    if (bnccTagState.edit.length > LIMITS.MAX_BNCC_CODES) return alert(`Selecione no máximo ${LIMITS.MAX_BNCC_CODES} códigos BNCC por projeto.`);
     if (coverInput.files.length > 1) return alert('Envie apenas uma imagem de capa.');
     if (lessonPdfInput.files.length > 1) return alert('Envie apenas um PDF pedagógico.');
 
@@ -808,6 +808,9 @@ async function saveProjectEdit() {
 
         // Se enviou novas bibliotecas, atualiza
         if (librariesInput.files.length > 0) {
+            if (librariesInput.files.length > LIMITS.MAX_LIBRARIES) {
+                throw new Error(`Máximo de ${LIMITS.MAX_LIBRARIES} bibliotecas.`);
+            }
             const libs = [];
             for (const file of librariesInput.files) {
                 if (!isSafePythonFilename(file.name)) {

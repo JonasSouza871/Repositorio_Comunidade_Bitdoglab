@@ -13,6 +13,7 @@ const ADMIN_EMAILS = [
 ];
 
 window.currentUserIsAdmin = false;
+window.currentUserProfileComplete = false;
 
 async function refreshAdminStatus(user) {
     if (!user) {
@@ -85,18 +86,14 @@ auth.onAuthStateChanged(async (user) => {
         userAvatar.src = user.photoURL || '';
         if (addProjectBtn) addProjectBtn.style.display = 'flex';
 
-        // Verifica se é primeiro login
-        checkFirstLogin(user.uid).then(async (isFirstLogin) => {
-            if (isFirstLogin) {
-                openProfileModal(user);
-            } else {
-                await removeLegacyPublicEmail(user.uid);
-            }
-        }).catch((err) => {
+        // Verifica se o perfil existe e se está realmente completo.
+        loadUserProfile(user).catch((err) => {
             console.error('Erro checkFirstLogin:', err);
         });
     } else {
         window.currentUserIsAdmin = false;
+        window.currentUserProfileComplete = false;
+        setProfileCompletionState(false, true);
 
         // Usuário deslogado
         loginBtn.style.display = 'flex';
@@ -126,17 +123,102 @@ document.addEventListener('DOMContentLoaded', function() {
         logoutBtn.addEventListener('click', logout);
     }
 
-    // Salvar perfil
-    const saveProfileBtn = document.querySelector('#profileModal .btn-save');
+    // Perfil
+    const saveProfileBtn = document.getElementById('saveProfileBtn');
     if (saveProfileBtn) {
         saveProfileBtn.addEventListener('click', saveProfile);
     }
+
+    const editProfileBtn = document.getElementById('editProfileBtn');
+    if (editProfileBtn) {
+        editProfileBtn.addEventListener('click', async function() {
+            const user = auth.currentUser;
+            if (!user) return;
+            const snapshot = await db.collection('users').doc(user.uid).get();
+            openProfileModal(user, {
+                required: !isProfileComplete(snapshot.exists ? snapshot.data() : null),
+                profileData: snapshot.exists ? snapshot.data() : null
+            });
+        });
+    }
+
+    const profileAlertBtn = document.getElementById('profileAlertBtn');
+    if (profileAlertBtn) {
+        profileAlertBtn.addEventListener('click', async function() {
+            const user = auth.currentUser;
+            if (!user) return;
+            const snapshot = await db.collection('users').doc(user.uid).get();
+            openProfileModal(user, {
+                required: true,
+                profileData: snapshot.exists ? snapshot.data() : null
+            });
+        });
+    }
+
+    const closeProfileBtn = document.getElementById('closeProfileBtn');
+    if (closeProfileBtn) {
+        closeProfileBtn.addEventListener('click', closeProfileModal);
+    }
 });
 
-// Verifica se usuário já tem perfil no Firestore
-async function checkFirstLogin(uid) {
-    const doc = await db.collection('users').doc(uid).get();
-    return !doc.exists;
+function isProfileComplete(data) {
+    return !!data
+        && typeof data.name === 'string'
+        && data.name.trim().length > 0
+        && data.name.length <= 100
+        && typeof data.bio === 'string'
+        && data.bio.trim().length > 0
+        && data.bio.length <= 200
+        && typeof data.photoURL === 'string'
+        && data.photoURL.length <= 1000
+        && Number.isInteger(data.projectCount)
+        && data.projectCount >= 0
+        && data.projectCount <= 20
+        && Number.isInteger(data.commentCount)
+        && data.commentCount >= 0
+        && data.commentCount <= 500
+        && typeof data.projectMutationId === 'string'
+        && data.projectMutationId.length <= 160
+        && isValidLinkedinUrl(data.linkedin || '')
+        && isValidProfileGithubUrl(data.github || '')
+        && !!data.createdAt
+        && !!data.updatedAt;
+}
+
+function setProfileCompletionState(isComplete, hideAlert) {
+    window.currentUserProfileComplete = !!isComplete;
+    const alert = document.getElementById('profileAlert');
+    const editButton = document.getElementById('editProfileBtn');
+
+    if (alert) {
+        alert.style.display = hideAlert || isComplete ? 'none' : 'flex';
+    }
+    if (editButton) {
+        editButton.classList.toggle('btn-profile-warning', !isComplete && !hideAlert);
+        editButton.title = isComplete ? 'Editar perfil' : 'Complete seu perfil';
+    }
+}
+
+async function loadUserProfile(user) {
+    const snapshot = await db.collection('users').doc(user.uid).get();
+    const profileData = snapshot.exists ? snapshot.data() : null;
+    const complete = isProfileComplete(profileData);
+
+    const userName = document.getElementById('userName');
+    if (userName && profileData && profileData.name) {
+        userName.textContent = profileData.name;
+    }
+
+    setProfileCompletionState(complete, false);
+    if (!complete) {
+        openProfileModal(user, {
+            required: true,
+            profileData: profileData
+        });
+        return;
+    }
+
+    await removeLegacyPublicEmail(user.uid);
 }
 
 async function removeLegacyPublicEmail(uid) {
@@ -152,20 +234,67 @@ async function removeLegacyPublicEmail(uid) {
     }
 }
 
-// Abre modal de cadastro de perfil
-function openProfileModal(user) {
+// Abre modal de cadastro ou edição de perfil
+function openProfileModal(user, options) {
+    options = options || {};
+    const profileData = options.profileData || {};
+    const required = options.required === true;
     const modal = document.getElementById('profileModal');
+    const title = document.getElementById('profileModalTitle');
+    const subtitle = document.getElementById('profileModalSubtitle');
+    const notice = document.getElementById('profileModalNotice');
+    const closeButton = document.getElementById('closeProfileBtn');
     const nameInput = document.getElementById('profileName');
+    const bioInput = document.getElementById('profileBio');
+    const linkedinInput = document.getElementById('profileLinkedin');
+    const githubInput = document.getElementById('profileGithub');
 
-    // Preenche com nome do Google como sugestão
-    nameInput.value = user.displayName || '';
+    modal.dataset.required = required ? 'true' : 'false';
+    title.textContent = required ? 'Complete seu perfil' : 'Editar perfil';
+    subtitle.textContent = required
+        ? 'Esses dados são necessários para publicar projetos na comunidade.'
+        : 'Atualize seu nome, bio e links quando quiser.';
+    notice.textContent = required
+        ? 'Seu cadastro estava incompleto ou antigo. Complete os campos abaixo para liberar a publicação.'
+        : '';
+    notice.style.display = required ? 'block' : 'none';
+    closeButton.style.display = required ? 'none' : 'inline-flex';
+
+    nameInput.value = profileData.name || user.displayName || '';
+    bioInput.value = profileData.bio || '';
+    linkedinInput.value = isValidLinkedinUrl(profileData.linkedin || '') ? profileData.linkedin : '';
+    githubInput.value = isValidProfileGithubUrl(profileData.github || '') ? profileData.github : '';
     modal.classList.add('active');
+    nameInput.focus();
 }
 
 // Fecha modal de perfil
 function closeProfileModal() {
     const modal = document.getElementById('profileModal');
+    if (modal.dataset.required === 'true') return;
     modal.classList.remove('active');
+}
+
+function isValidLinkedinUrl(url) {
+    return !url || /^https:\/\/(www\.)?linkedin\.com\/in\/[^/\s]+\/?$/.test(url);
+}
+
+function isValidProfileGithubUrl(url) {
+    return !url || /^https:\/\/(www\.)?github\.com\/[^/\s]+\/?$/.test(url);
+}
+
+async function getProfileProjectCount(userId, profileData) {
+    if (Number.isInteger(profileData.projectCount)
+        && profileData.projectCount >= 0
+        && profileData.projectCount <= 20) {
+        return profileData.projectCount;
+    }
+
+    const snapshot = await db.collection('projects')
+        .where('authorId', '==', userId)
+        .limit(20)
+        .get();
+    return snapshot.size;
 }
 
 // Salva perfil no Firestore
@@ -175,6 +304,8 @@ async function saveProfile() {
 
     const name = document.getElementById('profileName').value.trim();
     const bio = document.getElementById('profileBio').value.trim();
+    const linkedin = document.getElementById('profileLinkedin').value.trim();
+    const github = document.getElementById('profileGithub').value.trim();
 
     if (!name) {
         alert('Por favor, preencha seu nome.');
@@ -192,22 +323,62 @@ async function saveProfile() {
         alert('Bio muito longa. Máximo: 200 caracteres.');
         return;
     }
+    if (!isValidLinkedinUrl(linkedin)) {
+        alert('Link do LinkedIn inválido.');
+        return;
+    }
+    if (!isValidProfileGithubUrl(github)) {
+        alert('Link do GitHub inválido.');
+        return;
+    }
 
     try {
-        await db.collection('users').doc(user.uid).set({
-            name: name,
-            bio: bio,
-            photoURL: user.photoURL || '',
-            projectCount: 0,
-            projectMutationId: '',
-            commentCount: 0,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        const profileRef = db.collection('users').doc(user.uid);
+        const existingSnapshot = await profileRef.get();
+        const existingData = existingSnapshot.exists ? (existingSnapshot.data() || {}) : {};
 
+        if (existingSnapshot.exists && isProfileComplete(existingData)) {
+            await profileRef.update({
+                name: name,
+                bio: bio,
+                linkedin: linkedin,
+                github: github,
+                email: firebase.firestore.FieldValue.delete(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        } else {
+            const projectCount = await getProfileProjectCount(user.uid, existingData);
+            const commentCount = Number.isInteger(existingData.commentCount)
+                && existingData.commentCount >= 0
+                && existingData.commentCount <= 500
+                ? existingData.commentCount
+                : 0;
+
+            await profileRef.set({
+                name: name,
+                bio: bio,
+                photoURL: user.photoURL || existingData.photoURL || '',
+                projectCount: projectCount,
+                projectMutationId: typeof existingData.projectMutationId === 'string'
+                    ? existingData.projectMutationId
+                    : '',
+                commentCount: commentCount,
+                createdAt: existingData.createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                linkedin: linkedin,
+                github: github
+            });
+        }
+
+        setProfileCompletionState(true, false);
+        document.getElementById('userName').textContent = name;
+        document.getElementById('profileModal').dataset.required = 'false';
         closeProfileModal();
+        alert('Perfil salvo com sucesso. Agora você já pode publicar projetos.');
     } catch (error) {
         console.error('Erro ao salvar perfil:', error);
-        alert('Erro ao salvar perfil. Tente novamente.');
+        alert(error && error.code === 'permission-denied'
+            ? 'O Firebase ainda bloqueou a atualização do perfil. Recarregue a página e tente novamente.'
+            : 'Erro ao salvar perfil. Tente novamente.');
     }
 }

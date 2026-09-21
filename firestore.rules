@@ -29,26 +29,7 @@ service cloud.firestore {
     }
 
     function validNewProjectId(projectId, userId) {
-      return projectId == userId + '_0'
-        || projectId == userId + '_1'
-        || projectId == userId + '_2'
-        || projectId == userId + '_3'
-        || projectId == userId + '_4'
-        || projectId == userId + '_5'
-        || projectId == userId + '_6'
-        || projectId == userId + '_7'
-        || projectId == userId + '_8'
-        || projectId == userId + '_9'
-        || projectId == userId + '_10'
-        || projectId == userId + '_11'
-        || projectId == userId + '_12'
-        || projectId == userId + '_13'
-        || projectId == userId + '_14'
-        || projectId == userId + '_15'
-        || projectId == userId + '_16'
-        || projectId == userId + '_17'
-        || projectId == userId + '_18'
-        || projectId == userId + '_19';
+      return projectId.matches(userId + '_([0-9]|1[0-9])');
     }
 
     function validUserPublicData(data) {
@@ -105,15 +86,64 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
+    function needsProfileCompletion(data) {
+      return !('name' in data)
+        || !('bio' in data)
+        || !('photoURL' in data)
+        || !('projectCount' in data)
+        || !(data.projectCount is int)
+        || data.projectCount < 0
+        || data.projectCount > 20
+        || !('commentCount' in data)
+        || !(data.commentCount is int)
+        || data.commentCount < 0
+        || data.commentCount > 500
+        || !('projectMutationId' in data)
+        || !(data.projectMutationId is string)
+        || !('createdAt' in data)
+        || !('updatedAt' in data);
+    }
+
+    function validOwnerProfileCompletion() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return needsProfileCompletion(resource.data)
+        && validUserPublicData(request.resource.data)
+        && changed.hasOnly([
+          'name', 'bio', 'photoURL', 'projectCount', 'commentCount',
+          'projectMutationId', 'createdAt', 'updatedAt', 'linkedin', 'github', 'email'
+        ])
+        && (
+          !('projectCount' in resource.data)
+          || !(resource.data.projectCount is int)
+          || request.resource.data.projectCount == resource.data.projectCount
+        )
+        && (
+          !('commentCount' in resource.data)
+          || !(resource.data.commentCount is int)
+          || request.resource.data.commentCount == resource.data.commentCount
+        )
+        && (
+          !('projectMutationId' in resource.data)
+          || !(resource.data.projectMutationId is string)
+          || request.resource.data.projectMutationId == resource.data.projectMutationId
+        )
+        && (
+          !('createdAt' in resource.data)
+          || resource.data.createdAt == null
+          || request.resource.data.createdAt == resource.data.createdAt
+        )
+        && request.resource.data.updatedAt == request.time;
+    }
+
     function validOwnerProjectCounterUpdate(userId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let projectId = request.resource.data.projectMutationId;
       let projectPath = /databases/$(database)/documents/projects/$(projectId);
       let incrementing = request.resource.data.projectCount == resource.data.projectCount + 1
         && resource.data.projectCount < 20
-        && !exists(projectPath)
-        && existsAfter(projectPath)
-        && getAfter(projectPath).data.authorId == userId;
+        && request.resource.data.projectMutationId != resource.data.get('projectMutationId', '')
+        && exists(projectPath)
+        && get(projectPath).data.authorId == userId;
       let decrementing = request.resource.data.projectCount == resource.data.projectCount - 1
         && resource.data.projectCount > 0
         && exists(projectPath)
@@ -176,37 +206,26 @@ service cloud.firestore {
 
     function validLibraries(libraries) {
       return libraries is list
-        && libraries.size() <= 10
+        && libraries.size() <= 5
         && validLibraryItem(libraries, 0)
         && validLibraryItem(libraries, 1)
         && validLibraryItem(libraries, 2)
         && validLibraryItem(libraries, 3)
-        && validLibraryItem(libraries, 4)
-        && validLibraryItem(libraries, 5)
-        && validLibraryItem(libraries, 6)
-        && validLibraryItem(libraries, 7)
-        && validLibraryItem(libraries, 8)
-        && validLibraryItem(libraries, 9);
+        && validLibraryItem(libraries, 4);
     }
 
-    function validStringItem(items, index, maxSize) {
-      return items.size() <= index || (items[index] is string && items[index].size() <= maxSize);
-    }
-
-    function validProjectStringList(items, maxItems, minItems, maxSize) {
+    function validProjectList(items, maxItems, minItems) {
       return items is list
         && items.size() >= minItems
-        && items.size() <= maxItems
-        && validStringItem(items, 0, maxSize)
-        && validStringItem(items, 1, maxSize)
-        && validStringItem(items, 2, maxSize)
-        && validStringItem(items, 3, maxSize)
-        && validStringItem(items, 4, maxSize)
-        && validStringItem(items, 5, maxSize)
-        && validStringItem(items, 6, maxSize)
-        && validStringItem(items, 7, maxSize)
-        && validStringItem(items, 8, maxSize)
-        && validStringItem(items, 9, maxSize);
+        && items.size() <= maxItems;
+    }
+
+    function validBnccCodes(items) {
+      return validProjectList(items, 5, 1);
+    }
+
+    function validEmptyList(items) {
+      return items is list && items.size() == 0;
     }
 
     function validOptionalVideoUrl(url) {
@@ -235,10 +254,6 @@ service cloud.firestore {
           'lessonPdfURL', 'lessonPdfPath', 'lessonPdfMeta',
           'authorId', 'authorName', 'authorPhoto', 'mainFile', 'libraries',
           'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount', 'createdAt', 'updatedAt'
-        ])
-        && data.keys().hasAll([
-          'title', 'description', 'materials', 'videoURL', 'githubURL', 'authorId', 'authorName',
-          'mainFile', 'libraries', 'pdfLinks', 'extraLinks', 'bnccCodes', 'commentCount'
         ])
         && data.title is string
         && data.title.size() > 0
@@ -276,9 +291,9 @@ service cloud.firestore {
         && data.mainFile.content is string
         && data.mainFile.content.size() <= 102400
         && validLibraries(data.libraries)
-        && validProjectStringList(data.pdfLinks, 5, 0, 1000)
-        && validProjectStringList(data.extraLinks, 5, 0, 1000)
-        && validProjectStringList(data.bnccCodes, 10, 1, 20)
+        && validProjectList(data.pdfLinks, 5, 0)
+        && validEmptyList(data.extraLinks)
+        && validBnccCodes(data.bnccCodes)
         && data.commentCount is int
         && data.commentCount >= 0
         && data.commentCount <= 500;
@@ -301,12 +316,15 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
     }
 
-    function validProjectCounterCreate(projectId) {
+    function validProjectCounterCreate() {
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return exists(userPath)
-        && get(userPath).data.projectCount < 20
-        && getAfter(userPath).data.projectCount == get(userPath).data.projectCount + 1
-        && getAfter(userPath).data.projectMutationId == projectId;
+        && get(userPath).data.projectCount < 20;
+    }
+
+    function validIncompleteProjectRollback() {
+      return resource.data.get('imagePath', '') == ''
+        && resource.data.get('lessonPdfPath', '') == '';
     }
 
     function validProjectCounterDelete(projectId) {
@@ -324,6 +342,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && validNewUserData(request.resource.data);
       allow update: if (isOwner(userId) && (
                         validOwnerProfileUpdate()
+                        || validOwnerProfileCompletion()
                         || validOwnerProjectCounterUpdate(userId)
                       ))
                     || (isAdmin() && validUserPublicData(request.resource.data));
@@ -340,14 +359,14 @@ service cloud.firestore {
                     && validProjectData(request.resource.data, projectId)
                     && request.resource.data.createdAt == request.time
                     && request.resource.data.updatedAt == request.time
-                    && validProjectCounterCreate(projectId);
+                    && validProjectCounterCreate();
       allow update: if request.auth != null
                     && (resource.data.authorId == request.auth.uid || isAdmin())
                     && validProjectUpdateData(projectId);
       allow delete: if isAdmin()
                     || (isGoogleUser()
                       && resource.data.authorId == request.auth.uid
-                      && validProjectCounterDelete(projectId));
+                      && (validProjectCounterDelete(projectId) || validIncompleteProjectRollback()));
     }
 
     match /{document=**} {

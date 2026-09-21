@@ -18,21 +18,13 @@ service firebase.storage {
 
     function validProjectPath(userId, projectId) {
       return (request.auth.uid == userId || isAdmin())
-        && projectId.size() >= 10
-        && projectId.size() <= 140
-        && projectId.matches('[A-Za-z0-9_-]+');
-    }
-
-    function projectExistsForUser(userId, projectId) {
-      return firestore.exists(/databases/(default)/documents/projects/$(projectId))
-        && firestore.get(/databases/(default)/documents/projects/$(projectId)).data.authorId == userId;
+        && projectId.matches(userId + '_([0-9]|1[0-9])');
     }
 
     match /project-covers/{userId}/{projectId}/cover {
       allow read: if true;
       allow create, update: if isGoogleUser()
         && validProjectPath(userId, projectId)
-        && projectExistsForUser(userId, projectId)
         && request.resource.size > 0
         && request.resource.size < 2 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
@@ -43,7 +35,6 @@ service firebase.storage {
       allow read: if true;
       allow create, update: if isGoogleUser()
         && validProjectPath(userId, projectId)
-        && projectExistsForUser(userId, projectId)
         && request.resource.size > 0
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType == 'application/pdf';
