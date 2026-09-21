@@ -6,6 +6,7 @@ import socketserver
 import os
 
 PORT = 8000
+HOST = "127.0.0.1"
 
 class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -14,7 +15,10 @@ class MyHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-with socketserver.TCPServer(("", PORT), MyHTTPRequestHandler) as httpd:
-    print(f"Servidor rodando em http://localhost:{PORT}")
+with socketserver.ThreadingTCPServer((HOST, PORT), MyHTTPRequestHandler) as httpd:
+    print(f"Servidor rodando em http://{HOST}:{PORT}")
     print("Pressione Ctrl+C para parar")
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nServidor encerrado.")

@@ -20,6 +20,13 @@ const LIMITS = {
 };
 
 const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const SAFE_PYTHON_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,116}\.py$/;
+
+function isSafePythonFilename(name) {
+    return typeof name === 'string'
+        && name.length <= 120
+        && SAFE_PYTHON_FILENAME_PATTERN.test(name);
+}
 
 // Estado das tags BNCC por modal
 const bnccTagState = {
@@ -326,7 +333,9 @@ async function publishProject() {
 
     // Validação do Main.py
     const mainFile = mainFileInput.files[0];
-    if (!mainFile.name.endsWith('.py')) return alert('O arquivo principal deve ser .py');
+    if (!isSafePythonFilename(mainFile.name)) {
+        return alert('O arquivo principal deve usar apenas letras, números, _ ou - e terminar em .py');
+    }
     try {
         validateFileSize(mainFile, LIMITS.MAIN_FILE_MAX_KB);
     } catch (e) {
@@ -339,7 +348,9 @@ async function publishProject() {
         return alert(`Máximo de ${LIMITS.MAX_LIBRARIES} bibliotecas.`);
     }
     for (const file of libFiles) {
-        if (!file.name.endsWith('.py')) return alert(`${file.name} não é um arquivo .py`);
+        if (!isSafePythonFilename(file.name)) {
+            return alert(`${file.name} possui um nome inválido. Use apenas letras, números, _ ou - e termine em .py`);
+        }
         try {
             validateFileSize(file, LIMITS.LIB_FILE_MAX_KB);
         } catch (e) {

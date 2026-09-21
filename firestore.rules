@@ -155,13 +155,17 @@ service cloud.firestore {
         && meta.type == 'application/pdf';
     }
 
+    function validPythonFilename(name) {
+      return name is string
+        && name.size() > 3
+        && name.size() <= 120
+        && name.matches('[A-Za-z0-9][A-Za-z0-9_-]*\\.py');
+    }
+
     function validLibrary(lib) {
       return lib is map
         && lib.keys().hasOnly(['name', 'content'])
-        && lib.name is string
-        && lib.name.size() > 0
-        && lib.name.size() <= 120
-        && lib.name.matches('.*\\.py')
+        && validPythonFilename(lib.name)
         && lib.content is string
         && lib.content.size() <= 102400;
     }
@@ -268,10 +272,7 @@ service cloud.firestore {
         && (!('lessonPdfMeta' in data) || data.lessonPdfMeta == null || validLessonPdfMeta(data.lessonPdfMeta))
         && data.mainFile is map
         && data.mainFile.keys().hasOnly(['name', 'content'])
-        && data.mainFile.name is string
-        && data.mainFile.name.size() > 0
-        && data.mainFile.name.size() <= 120
-        && data.mainFile.name.matches('.*\\.py')
+        && validPythonFilename(data.mainFile.name)
         && data.mainFile.content is string
         && data.mainFile.content.size() <= 102400
         && validLibraries(data.libraries)

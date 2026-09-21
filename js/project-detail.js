@@ -616,6 +616,9 @@ async function flashCurrentProject() {
         if (currentProject.libraries && currentProject.libraries.length > 0) {
             await fm.mkdir('lib');
             for (const lib of currentProject.libraries) {
+                if (!isSafePythonFilename(lib.name)) {
+                    throw new Error(`Nome de biblioteca inválido: ${lib.name}`);
+                }
                 const libPath = `lib/${lib.name}`;
                 fm.updateStatus(`Enviando ${libPath}...`);
                 await fm.writeFile(libPath, lib.content);
@@ -796,7 +799,9 @@ async function saveProjectEdit() {
         // Se enviou novo Main.py, atualiza
         if (mainFileInput.files[0]) {
             const file = mainFileInput.files[0];
-            if (!file.name.endsWith('.py')) throw new Error('O arquivo principal deve ser .py');
+            if (!isSafePythonFilename(file.name)) {
+                throw new Error('O arquivo principal deve usar apenas letras, números, _ ou - e terminar em .py');
+            }
             if (file.size / 1024 > 100) throw new Error('Main.py muito grande. Máximo: 100KB.');
             updateData.mainFile = { name: file.name, content: await readEditFileAsText(file) };
         }
@@ -805,7 +810,9 @@ async function saveProjectEdit() {
         if (librariesInput.files.length > 0) {
             const libs = [];
             for (const file of librariesInput.files) {
-                if (!file.name.endsWith('.py')) throw new Error(`${file.name} não é .py`);
+                if (!isSafePythonFilename(file.name)) {
+                    throw new Error(`${file.name} possui um nome inválido. Use apenas letras, números, _ ou - e termine em .py`);
+                }
                 if (file.size / 1024 > 100) throw new Error(`${file.name} muito grande. Máximo: 100KB.`);
                 libs.push({ name: file.name, content: await readEditFileAsText(file) });
             }
