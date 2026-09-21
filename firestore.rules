@@ -322,19 +322,6 @@ service cloud.firestore {
         && get(userPath).data.projectCount < 20;
     }
 
-    function validIncompleteProjectRollback() {
-      return resource.data.get('imagePath', '') == ''
-        && resource.data.get('lessonPdfPath', '') == '';
-    }
-
-    function validProjectCounterDelete(projectId) {
-      let userPath = /databases/$(database)/documents/users/$(resource.data.authorId);
-      return exists(userPath)
-        && get(userPath).data.projectCount > 0
-        && getAfter(userPath).data.projectCount == get(userPath).data.projectCount - 1
-        && getAfter(userPath).data.projectMutationId == projectId;
-    }
-
     // Usuarios: leitura publica limitada; o proprio edita dados publicos; admin pode ajustar.
     match /users/{userId} {
       allow get: if true;
@@ -365,8 +352,7 @@ service cloud.firestore {
                     && validProjectUpdateData(projectId);
       allow delete: if isAdmin()
                     || (isGoogleUser()
-                      && resource.data.authorId == request.auth.uid
-                      && (validProjectCounterDelete(projectId) || validIncompleteProjectRollback()));
+                      && resource.data.authorId == request.auth.uid);
     }
 
     match /{document=**} {
