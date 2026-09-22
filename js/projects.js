@@ -116,6 +116,12 @@ function clearProjectForm() {
     document.querySelectorAll('input[name="projectBoardVersion"], input[name="projectBipesMode"], input[name="projectDifficulty"]').forEach(input => {
         input.checked = false;
     });
+    document.querySelectorAll('.bipes-help-trigger').forEach(button => {
+        button.setAttribute('aria-expanded', 'false');
+    });
+    document.querySelectorAll('.bipes-help-panel').forEach(panel => {
+        panel.hidden = true;
+    });
     document.getElementById('uploadProgress').style.display = 'none';
     bnccTagState.project = [];
     renderBnccTags('project');
@@ -932,6 +938,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.querySelectorAll('input[name="projectType"]').forEach(input => {
         input.addEventListener('change', updateProjectTypeFields);
+    });
+
+    document.querySelectorAll('.bipes-help-trigger').forEach(button => {
+        button.addEventListener('click', function() {
+            const panel = document.getElementById(this.dataset.bipesHelpTarget);
+            if (!panel) return;
+
+            const shouldOpen = panel.hidden;
+            panel.hidden = !shouldOpen;
+            this.setAttribute('aria-expanded', String(shouldOpen));
+        });
     });
     
     // Modal de Edição de Projeto

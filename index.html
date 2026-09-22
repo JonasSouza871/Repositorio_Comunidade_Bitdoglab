@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comunidade BitDogLab</title>
     <link rel="icon" type="image/png" href="images/icon-bitdoglab-nobg.png">
-    <link rel="stylesheet" href="css/style.css?v=20260921-1">
+    <link rel="stylesheet" href="css/style.css?v=20260922-1">
     <link rel="stylesheet" href="lib/xterm/xterm.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
@@ -350,11 +350,78 @@
                 </div>
 
                 <div id="bipesProjectFields" hidden>
-                    <label class="form-label">Imagem do Projeto * <span class="form-hint">(captura mostrando os blocos; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
+                    <div class="bipes-field-heading">
+                        <label class="form-label" for="projectBipesImage">Imagem do Projeto * <span class="form-hint">(captura mostrando os blocos; JPG, PNG, WEBP ou GIF; máx. 2MB)</span></label>
+                        <button type="button" class="bipes-help-trigger" data-bipes-help-target="bipesImageHelp" aria-controls="bipesImageHelp" aria-expanded="false">
+                            <span class="material-icons" aria-hidden="true">help_outline</span>
+                            Saiba mais
+                        </button>
+                    </div>
                     <input type="file" id="projectBipesImage" class="form-file" accept="image/jpeg,image/png,image/webp,image/gif">
+                    <section id="bipesImageHelp" class="bipes-help-panel" aria-labelledby="bipesImageHelpTitle" hidden>
+                        <div class="bipes-help-title-row">
+                            <div>
+                                <span class="bipes-help-kicker">Tutorial da imagem</span>
+                                <h3 id="bipesImageHelpTitle">Como gerar a imagem dos seus blocos</h3>
+                            </div>
+                            <a class="bipes-platform-link" href="https://bitdoglab-blocos.github.io/BIPES-BITDOGLAB/src/pages/" target="_blank" rel="noopener noreferrer">
+                                Abrir BIPES BitDogLab
+                                <span class="material-icons" aria-hidden="true">open_in_new</span>
+                            </a>
+                        </div>
+                        <ol class="bipes-help-steps">
+                            <li>Abra seu projeto na plataforma e organize os blocos que deseja mostrar.</li>
+                            <li>Clique no ícone de câmera indicado abaixo.</li>
+                            <li>Escolha um nome, mantenha o formato PNG e clique em <strong>Salvar</strong>.</li>
+                            <li>Neste formulário, selecione a imagem salva no campo acima.</li>
+                        </ol>
+                        <div class="bipes-help-gallery">
+                            <figure>
+                                <img src="images/bipes-tutorial/capture-block-workspace.png" alt="Barra do BIPES BitDogLab com o botão de câmera destacado" loading="lazy">
+                                <figcaption>1. Use o botão de câmera para capturar a área dos blocos.</figcaption>
+                            </figure>
+                            <figure>
+                                <img src="images/bipes-tutorial/save-block-image.png" alt="Janela para salvar a captura dos blocos como imagem PNG" loading="lazy">
+                                <figcaption>2. Salve a captura no computador como imagem PNG.</figcaption>
+                            </figure>
+                        </div>
+                    </section>
 
-                    <label class="form-label">Arquivo do BIPES BitDogLab * <span class="form-hint">(XML exportado pela plataforma; máx. 500KB)</span></label>
+                    <div class="bipes-field-heading">
+                        <label class="form-label" for="projectBlockXml">Arquivo do BIPES BitDogLab * <span class="form-hint">(XML exportado pela plataforma; máx. 500KB)</span></label>
+                        <button type="button" class="bipes-help-trigger" data-bipes-help-target="bipesXmlHelp" aria-controls="bipesXmlHelp" aria-expanded="false">
+                            <span class="material-icons" aria-hidden="true">help_outline</span>
+                            Saiba mais
+                        </button>
+                    </div>
                     <input type="file" id="projectBlockXml" class="form-file" accept="application/xml,text/xml,.xml">
+                    <section id="bipesXmlHelp" class="bipes-help-panel" aria-labelledby="bipesXmlHelpTitle" hidden>
+                        <div class="bipes-help-title-row">
+                            <div>
+                                <span class="bipes-help-kicker">Tutorial do XML</span>
+                                <h3 id="bipesXmlHelpTitle">Como baixar e reutilizar o projeto em blocos</h3>
+                            </div>
+                            <a class="bipes-platform-link" href="https://bitdoglab-blocos.github.io/BIPES-BITDOGLAB/src/pages/" target="_blank" rel="noopener noreferrer">
+                                Abrir BIPES BitDogLab
+                                <span class="material-icons" aria-hidden="true">open_in_new</span>
+                            </a>
+                        </div>
+                        <ol class="bipes-help-steps">
+                            <li>Na plataforma, clique na seta para baixo para baixar o arquivo XML do projeto.</li>
+                            <li>Neste formulário, selecione o XML baixado no campo acima.</li>
+                            <li>Para abrir um projeto XML novamente no BIPES BitDogLab, use a seta para cima e escolha o arquivo.</li>
+                        </ol>
+                        <div class="bipes-help-gallery bipes-help-gallery-compact">
+                            <figure>
+                                <img src="images/bipes-tutorial/download-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de baixar XML destacado" loading="lazy">
+                                <figcaption>1. A seta para baixo baixa o XML do projeto.</figcaption>
+                            </figure>
+                            <figure>
+                                <img src="images/bipes-tutorial/upload-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de importar XML destacado" loading="lazy">
+                                <figcaption>2. A seta para cima permite abrir um XML na plataforma.</figcaption>
+                            </figure>
+                        </div>
+                    </section>
 
                     <fieldset class="choice-fieldset">
                         <legend class="form-label">Versão da BitDogLab *</legend>
