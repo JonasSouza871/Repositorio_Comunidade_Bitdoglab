@@ -24,6 +24,36 @@ const LIMITS = {
 const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const SAFE_PYTHON_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,116}\.py$/;
 const BIPES_PROJECT_TYPE = 'bipes-bitdoglab';
+let lastBipesImageTrigger = null;
+
+function openBipesTutorialImage(trigger) {
+    const image = trigger.querySelector('img');
+    const lightbox = document.getElementById('bipesImageLightbox');
+    const preview = document.getElementById('bipesImageLightboxPreview');
+    const caption = document.getElementById('bipesImageLightboxCaption');
+    if (!image || !lightbox || !preview || !caption) return;
+
+    lastBipesImageTrigger = trigger;
+    preview.src = image.currentSrc || image.src;
+    preview.alt = image.alt;
+    caption.textContent = trigger.closest('figure')?.querySelector('figcaption')?.textContent || image.alt;
+    lightbox.hidden = false;
+    lightbox.querySelector('.bipes-image-lightbox-close')?.focus();
+}
+
+function closeBipesTutorialImage() {
+    const lightbox = document.getElementById('bipesImageLightbox');
+    const preview = document.getElementById('bipesImageLightboxPreview');
+    if (!lightbox || lightbox.hidden) return;
+
+    lightbox.hidden = true;
+    if (preview) {
+        preview.removeAttribute('src');
+        preview.alt = '';
+    }
+    lastBipesImageTrigger?.focus();
+    lastBipesImageTrigger = null;
+}
 
 // O nome original continua no arquivo enviado, mas o nome salvo no Firestore
 // precisa respeitar o limite definido nas regras de segurança (120 caracteres).
@@ -949,6 +979,23 @@ document.addEventListener('DOMContentLoaded', function() {
             panel.hidden = !shouldOpen;
             this.setAttribute('aria-expanded', String(shouldOpen));
         });
+    });
+
+    document.querySelectorAll('.bipes-tutorial-image-button').forEach(button => {
+        button.addEventListener('click', function() {
+            openBipesTutorialImage(this);
+        });
+    });
+
+    const bipesImageLightbox = document.getElementById('bipesImageLightbox');
+    bipesImageLightbox?.querySelector('.bipes-image-lightbox-close')?.addEventListener('click', closeBipesTutorialImage);
+    bipesImageLightbox?.addEventListener('click', function(event) {
+        if (event.target === this) closeBipesTutorialImage();
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && bipesImageLightbox && !bipesImageLightbox.hidden) {
+            closeBipesTutorialImage();
+        }
     });
     
     // Modal de Edição de Projeto

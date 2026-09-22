@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comunidade BitDogLab</title>
     <link rel="icon" type="image/png" href="images/icon-bitdoglab-nobg.png">
-    <link rel="stylesheet" href="css/style.css?v=20260922-1">
+    <link rel="stylesheet" href="css/style.css?v=20260922-2">
     <link rel="stylesheet" href="lib/xterm/xterm.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
@@ -377,11 +377,17 @@
                         </ol>
                         <div class="bipes-help-gallery">
                             <figure>
-                                <img src="images/bipes-tutorial/capture-block-workspace.png" alt="Barra do BIPES BitDogLab com o botão de câmera destacado" loading="lazy">
+                                <button type="button" class="bipes-tutorial-image-button" aria-label="Ampliar imagem do botão de câmera">
+                                    <img src="images/bipes-tutorial/capture-block-workspace.png" alt="Barra do BIPES BitDogLab com o botão de câmera destacado" loading="lazy">
+                                    <span class="bipes-image-zoom-hint"><span class="material-icons" aria-hidden="true">zoom_in</span> Ampliar</span>
+                                </button>
                                 <figcaption>1. Use o botão de câmera para capturar a área dos blocos.</figcaption>
                             </figure>
                             <figure>
-                                <img src="images/bipes-tutorial/save-block-image.png" alt="Janela para salvar a captura dos blocos como imagem PNG" loading="lazy">
+                                <button type="button" class="bipes-tutorial-image-button" aria-label="Ampliar janela para salvar a imagem PNG">
+                                    <img src="images/bipes-tutorial/save-block-image.png" alt="Janela para salvar a captura dos blocos como imagem PNG" loading="lazy">
+                                    <span class="bipes-image-zoom-hint"><span class="material-icons" aria-hidden="true">zoom_in</span> Ampliar</span>
+                                </button>
                                 <figcaption>2. Salve a captura no computador como imagem PNG.</figcaption>
                             </figure>
                         </div>
@@ -413,11 +419,17 @@
                         </ol>
                         <div class="bipes-help-gallery bipes-help-gallery-compact">
                             <figure>
-                                <img src="images/bipes-tutorial/download-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de baixar XML destacado" loading="lazy">
+                                <button type="button" class="bipes-tutorial-image-button" aria-label="Ampliar imagem do botão para baixar o XML">
+                                    <img src="images/bipes-tutorial/download-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de baixar XML destacado" loading="lazy">
+                                    <span class="bipes-image-zoom-hint"><span class="material-icons" aria-hidden="true">zoom_in</span> Ampliar</span>
+                                </button>
                                 <figcaption>1. A seta para baixo baixa o XML do projeto.</figcaption>
                             </figure>
                             <figure>
-                                <img src="images/bipes-tutorial/upload-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de importar XML destacado" loading="lazy">
+                                <button type="button" class="bipes-tutorial-image-button" aria-label="Ampliar imagem do botão para importar o XML">
+                                    <img src="images/bipes-tutorial/upload-project-xml.png" alt="Barra do BIPES BitDogLab com o botão de importar XML destacado" loading="lazy">
+                                    <span class="bipes-image-zoom-hint"><span class="material-icons" aria-hidden="true">zoom_in</span> Ampliar</span>
+                                </button>
                                 <figcaption>2. A seta para cima permite abrir um XML na plataforma.</figcaption>
                             </figure>
                         </div>
@@ -489,6 +501,16 @@
                     <span class="material-icons">publish</span> Publicar Projeto
                 </button>
             </div>
+        </div>
+    </div>
+
+    <div id="bipesImageLightbox" class="bipes-image-lightbox" role="dialog" aria-modal="true" aria-label="Imagem ampliada do tutorial BIPES BitDogLab" hidden>
+        <div class="bipes-image-lightbox-content">
+            <button type="button" class="bipes-image-lightbox-close" aria-label="Fechar imagem ampliada">
+                <span class="material-icons" aria-hidden="true">close</span>
+            </button>
+            <img id="bipesImageLightboxPreview" alt="">
+            <p id="bipesImageLightboxCaption"></p>
         </div>
     </div>
 
