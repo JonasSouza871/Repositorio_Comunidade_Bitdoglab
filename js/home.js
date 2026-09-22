@@ -116,16 +116,16 @@ function createProjectCard(id, project) {
         ? `<div class="project-image-wrapper"><img src="${escapeHtml(directImageUrl)}" class="project-image" alt="${escapeHtml(project.title)}"><div class="project-image-placeholder" style="position:absolute;top:0;left:0;width:100%;height:100%;z-index:-1"><span class="material-icons">image</span></div></div>`
         : `<div class="project-image-placeholder"><span class="material-icons">image</span></div>`;
 
-    // Tags BNCC
-    const bnccHtml = (project.bnccCodes && project.bnccCodes.length > 0)
-        ? `<div class="project-card-tags">${project.bnccCodes.slice(0, 4).map(code =>
+    // Tipo do projeto e tags BNCC
+    const bnccTags = (project.bnccCodes && project.bnccCodes.length > 0)
+        ? `${project.bnccCodes.slice(0, 4).map(code =>
             `<span class="bncc-tag" data-bncc="${escapeHtml(code)}">${escapeHtml(code)}</span>`
-          ).join('')}${project.bnccCodes.length > 4 ? `<span class="bncc-tag">+${project.bnccCodes.length - 4}</span>` : ''}</div>`
+          ).join('')}${project.bnccCodes.length > 4 ? `<span class="bncc-tag">+${project.bnccCodes.length - 4}</span>` : ''}`
         : '';
+    const bnccHtml = `<div class="project-card-tags">${typeBadge}${bnccTags}</div>`;
 
     card.innerHTML = `
         ${imageHtml}
-        ${typeBadge}
         <h3 class="project-card-title">${escapeHtml(project.title)}</h3>
         ${bnccHtml}
         <p class="project-card-desc">${escapeHtml(project.description)}</p>

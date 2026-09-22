@@ -85,7 +85,7 @@ async function renderProjectDetail(project) {
             ${coverImageUrl ? `<img src="${escapeHtml(coverImageUrl)}" class="detail-image" alt="${escapeHtml(project.title)}">` : ''}
             
             <!-- Info principal -->
-            ${isBipes ? '<span class="project-type-badge"><span class="material-icons">extension</span>BIPES BitDogLab</span>' : ''}
+            ${isBipes ? '<span class="project-type-badge project-type-badge-blocks"><span class="material-icons">extension</span>BIPES BitDogLab</span>' : ''}
             <h1 class="detail-title">${escapeHtml(project.title)}</h1>
             <div class="detail-author">
                 <img src="${escapeHtml(authorPhoto)}" alt="" class="detail-author-avatar">

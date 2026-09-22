@@ -25,6 +25,21 @@ const ALLOWED_COVER_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 const SAFE_PYTHON_FILENAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,116}\.py$/;
 const BIPES_PROJECT_TYPE = 'bipes-bitdoglab';
 
+// O nome original continua no arquivo enviado, mas o nome salvo no Firestore
+// precisa respeitar o limite definido nas regras de segurança (120 caracteres).
+function getSafeMetadataFileName(file, fallbackName) {
+    const originalName = typeof file?.name === 'string' && file.name
+        ? file.name.normalize('NFC')
+        : fallbackName;
+
+    if (originalName.length <= 120) return originalName;
+
+    const extensionIndex = originalName.lastIndexOf('.');
+    const extension = extensionIndex > 0 ? originalName.slice(extensionIndex) : '';
+    const maxBaseLength = Math.max(1, 120 - extension.length);
+    return originalName.slice(0, maxBaseLength) + extension;
+}
+
 function isSafePythonFilename(name) {
     return typeof name === 'string'
         && name.length <= 120
@@ -226,7 +241,7 @@ async function uploadLessonPdf(file, userId, projectId) {
         lessonPdfURL: lessonPdfURL,
         lessonPdfPath: lessonPdfPath,
         lessonPdfMeta: {
-            name: file.name,
+            name: getSafeMetadataFileName(file, 'lesson-plan.pdf'),
             size: file.size,
             type: 'application/pdf'
         }
@@ -256,7 +271,7 @@ async function uploadBlockXml(file, content, userId, projectId) {
         blockFileURL: await snapshot.ref.getDownloadURL(),
         blockFilePath: blockFilePath,
         blockFileMeta: {
-            name: file.name,
+            name: getSafeMetadataFileName(file, 'workspace.xml'),
             size: file.size,
             type: 'application/xml'
         }
@@ -295,7 +310,7 @@ async function uploadProjectCover(file, userId, projectId) {
         imageURL: imageURL,
         imagePath: imagePath,
         imageMeta: {
-            name: file.name,
+            name: getSafeMetadataFileName(file, 'cover'),
             size: file.size,
             type: file.type
         }
@@ -332,7 +347,7 @@ async function uploadBipesProjectImage(file, userId, projectId) {
         projectImageURL: await snapshot.ref.getDownloadURL(),
         projectImagePath: projectImagePath,
         projectImageMeta: {
-            name: file.name,
+            name: getSafeMetadataFileName(file, 'project-image'),
             size: file.size,
             type: file.type
         }
@@ -658,16 +673,12 @@ async function publishProject() {
         await projectRef.update({
             imageURL: coverUpload.imageURL,
             imagePath: coverUpload.imagePath,
-            imageMeta: coverUpload.imageMeta,
             projectImageURL: projectImageUpload ? projectImageUpload.projectImageURL : '',
             projectImagePath: projectImageUpload ? projectImageUpload.projectImagePath : '',
-            projectImageMeta: projectImageUpload ? projectImageUpload.projectImageMeta : null,
             lessonPdfURL: lessonUpload.lessonPdfURL,
             lessonPdfPath: lessonUpload.lessonPdfPath,
-            lessonPdfMeta: lessonUpload.lessonPdfMeta,
             blockFileURL: blockUpload ? blockUpload.blockFileURL : '',
             blockFilePath: blockUpload ? blockUpload.blockFilePath : '',
-            blockFileMeta: blockUpload ? blockUpload.blockFileMeta : null,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 

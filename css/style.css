@@ -1373,11 +1373,10 @@ html, body {
     align-items: center;
     gap: 5px;
     width: fit-content;
-    margin: 14px 20px 8px;
-    padding: 6px 10px;
+    margin: 0;
+    padding: 5px 9px;
     border-radius: 999px;
-    background: #E8F2FF;
-    color: #2457A7;
+    border: 1px solid transparent;
     font-size: 11px;
     font-weight: 800;
 }
@@ -1387,13 +1386,15 @@ html, body {
 }
 
 .project-type-badge-micropython {
-    background: #F1ECFF;
-    color: #6842A8;
+    background: #FFF6D8;
+    border-color: #E8C35E;
+    color: #966500;
 }
 
 .project-type-badge-blocks {
-    background: #E8F2FF;
-    color: #2457A7;
+    background: #E8F6FF;
+    border-color: #9DD8F2;
+    color: #247BAE;
 }
 
 .bncc-suggestions.active {
